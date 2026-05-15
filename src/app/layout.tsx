@@ -23,8 +23,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 
   verification: {
-    google: "PASTE_GOOGLE_VERIFICATION_CODE_HERE",
-  },
+  google: "FreW2NoyKjt3MqR9omPpGDeNElSGvbA_xTIHW6Hgc4w",
+},
 
   title: {
     default:
