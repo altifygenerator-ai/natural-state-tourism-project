@@ -1,26 +1,789 @@
+/* src/app/globals.css */
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --forest: #183527;
+  --forest-dark: #0e2118;
+  --gold: #d4a753;
+  --gold-dark: #a9782b;
+  --cream: #f3ead8;
+  --paper: #fbf7ef;
+  --charcoal: #202421;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--paper);
+  color: var(--charcoal);
+  font-family: var(--font-body), Arial, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-heading {
+  font-family: var(--font-heading), Georgia, serif;
+}
+
+a {
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--forest);
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.site-header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 100;
+  background: rgb(0 0 0 / 0.28);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  transition: 0.25s ease;
+}
+
+.site-header.scrolled {
+  background: rgb(14 33 24 / 0.94);
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.site-header-inner {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0.9rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-logo-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.site-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.site-logo-text {
+  display: none;
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  text-shadow: 0 2px 10px rgb(0 0 0 / 0.65);
+}
+
+.site-nav {
+  display: none;
+  align-items: center;
+  gap: 1.8rem;
+}
+
+.site-nav-link {
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 10px rgb(0 0 0 / 0.65);
+  transition: 0.2s ease;
+}
+
+.site-nav-link:hover {
+  color: var(--gold);
+}
+
+.site-nav-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--gold);
+  padding: 0.8rem 1.25rem;
+  color: var(--forest);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  transition: 0.2s ease;
+}
+
+.site-nav-cta:hover {
+  background: white;
+  color: var(--forest);
+}
+
+@media (min-width: 640px) {
+  .site-logo-text {
+    display: block;
+  }
+}
+
+@media (min-width: 768px) {
+  .site-nav {
+    display: flex;
+  }
+
+  .site-header-inner {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
+/* =========================
+   HERO
+========================= */
+
+.hero-section {
+  position: relative;
+  min-height: 88vh;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.55),
+      rgba(24, 53, 39, 0.88),
+      var(--forest)
+    ),
+    url("/images/arkansas-hero.jpg");
+  background-size: cover;
+  background-position: center;
+  color: white;
+}
+
+.hero-container {
+  position: relative;
+  z-index: 2;
+  min-height: 88vh;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 8rem 1.5rem 5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hero-title {
+  max-width: 64rem;
+  font-size: clamp(3.5rem, 9vw, 8rem);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  font-weight: 900;
+}
+
+.hero-text {
+  margin-top: 1.75rem;
+  max-width: 48rem;
+  font-size: 1.2rem;
+  line-height: 2rem;
+  color: rgb(255 255 255 / 0.82);
+}
+
+.hero-actions {
+  margin-top: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* =========================
+   LAYOUT
+========================= */
+
+.container {
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+.container-grid,
+.advertising-grid {
+  max-width: 80rem;
+  margin: 0 auto;
+  display: grid;
+  gap: 3rem;
+}
+
+.section-paper,
+.section-white,
+.advertising-section,
+.cta-section {
+  padding: 6rem 1.5rem;
+}
+
+.section-paper {
+  background: var(--paper);
+}
+
+.section-white {
+  background: white;
+}
+
+.section-heading {
+  max-width: 48rem;
+}
+
+.section-heading-row {
+  margin-bottom: 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* =========================
+   TYPOGRAPHY
+========================= */
+
+.eyebrow,
+.eyebrow-light,
+.card-eyebrow {
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+}
+
+.eyebrow,
+.card-eyebrow {
+  color: var(--gold-dark);
+}
+
+.eyebrow-light {
+  color: var(--gold);
+}
+
+.section-title,
+.section-title-light {
+  margin-top: 1rem;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  font-weight: 900;
+}
+
+.section-title {
+  color: var(--forest);
+}
+
+.section-title-light {
+  color: white;
+}
+
+.section-lead,
+.section-text,
+.section-text-light,
+.card-text,
+.card-text-dark {
+  line-height: 2rem;
+}
+
+.section-lead {
+  margin-top: 1.5rem;
+  font-size: 1.125rem;
+  color: rgb(0 0 0 / 0.7);
+}
+
+.section-text {
+  margin-top: 1.25rem;
+  color: rgb(0 0 0 / 0.65);
+}
+
+.section-text-light {
+  margin-top: 1.5rem;
+  font-size: 1.125rem;
+  color: rgb(255 255 255 / 0.74);
+}
+
+.centered {
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.btn-gold,
+.btn-dark,
+.btn-outline-light,
+.btn-outline-dark {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 1rem 1.75rem;
+  font-size: 0.875rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: 0.2s ease;
+}
+
+.btn-gold {
+  background: var(--gold);
+  color: var(--forest);
+}
+
+.btn-gold:hover {
+  background: white;
+}
+
+.btn-dark {
+  margin-top: 2rem;
+  background: var(--forest);
+  color: white;
+}
+
+.btn-dark:hover {
+  background: var(--gold-dark);
+}
+
+.btn-outline-light {
+  border: 1px solid rgb(255 255 255 / 0.3);
+  color: white;
+}
+
+.btn-outline-light:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.btn-outline-dark {
+  border: 1px solid var(--forest);
+  color: var(--forest);
+}
+
+.btn-outline-dark:hover {
+  background: var(--forest);
+  color: white;
+}
+
+/* =========================
+   TRUST STRIP
+========================= */
+
+.trust-strip {
+  border-top: 1px solid rgb(0 0 0 / 0.08);
+  border-bottom: 1px solid rgb(0 0 0 / 0.08);
+  background: var(--cream);
+}
+
+.trust-strip-grid {
+  max-width: 80rem;
+  margin: 0 auto;
+  display: grid;
+}
+
+.trust-strip-item {
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--forest);
+  border-bottom: 1px solid rgb(0 0 0 / 0.08);
+}
+
+/* =========================
+   IMAGE CARDS
+========================= */
+
+.image-card {
+  overflow: hidden;
+  border-radius: 2rem;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  background: white;
+  padding: 0.75rem;
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.12);
+}
+
+.image-tall {
+  aspect-ratio: 4 / 5;
+  border-radius: 1.5rem;
+  background-size: cover;
+  background-position: center;
+}
+
+/* =========================
+   NETWORK
+========================= */
+
+.network-grid,
+.future-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.network-card {
+  overflow: hidden;
+  border-radius: 2rem;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  background: var(--paper);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.06);
+  transition: 0.25s ease;
+}
+
+.network-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.12);
+}
+
+.network-image-wrap {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--cream);
+}
+
+.network-image {
+  object-fit: cover;
+  transition: 0.7s ease;
+}
+
+.network-card:hover .network-image {
+  transform: scale(1.05);
+}
+
+.network-card-content {
+  padding: 1.5rem;
+}
+
+.card-title,
+.card-title-dark {
+  margin-top: 0.75rem;
+  font-size: 1.75rem;
+  line-height: 1;
+  font-weight: 900;
+  color: var(--forest);
+}
+
+.card-title-dark {
+  margin-top: 1.5rem;
+}
+
+.card-text,
+.card-text-dark {
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+  color: rgb(0 0 0 / 0.65);
+}
+.network-hero {
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.32),
+      rgba(24, 53, 39, 0.58),
+      rgba(24, 53, 39, 0.9)
+    ),
+    url("/images/arkansas-hero.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+.network-grid-spaced {
+  margin-top: 3rem;
+}
+
+.coming-soon-card {
+  height: 100%;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at top right, rgba(212, 167, 83, 0.35), transparent 45%),
+    var(--forest);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.coming-soon-title {
+  margin-top: 0.75rem;
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 900;
+  color: white;
+}
+
+.coming-soon-text {
+  margin-top: 1.5rem;
+  line-height: 1.6;
+  color: rgb(255 255 255 / 0.78);
+}
+/* =========================
+   ADVERTISING
+========================= */
+
+.advertising-section {
+  background: var(--forest);
+  color: white;
+}
+
+.featured-preview-card {
+  border-radius: 2rem;
+  background: white;
+  color: var(--forest);
+  padding: 1.5rem;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.25);
+}
+
+.featured-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  background: var(--gold);
+  padding: 0.7rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.featured-image-placeholder {
+  margin-top: 1rem;
+  aspect-ratio: 16 / 10;
+  border-radius: 1rem;
+  background: var(--cream);
+}
+.featured-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 1rem;
+}
+.advertising-hero {
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.32),
+      rgba(24, 53, 39, 0.58),
+      rgba(24, 53, 39, 0.9)
+    ),
+    url("/images/arkansas-hero.jpg");
+
+  background-size: cover;
+  background-position: center;
+}
+.contact-methods-grid {
+  margin-top: 3rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.contact-method-card {
+  display: block;
+  border-radius: 2rem;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  background: white;
+  padding: 1.75rem;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.05);
+  transition: 0.25s ease;
+}
+
+.contact-method-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.12);
+}
+
+.contact-grid {
+  align-items: start;
+}
+
+.contact-form {
+  border-radius: 2rem;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  background: white;
+  padding: 1.5rem;
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.1);
+}
+
+.form-row {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.form-field label {
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--forest);
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgb(0 0 0 / 0.12);
+  background: var(--paper);
+  padding: 1rem;
+  font: inherit;
+  color: var(--charcoal);
+}
+
+.form-field textarea {
+  resize: vertical;
+}
+
+.suggestion-tags {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.suggestion-tag {
+  border-radius: 999px;
+  background: white;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  padding: 0.8rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--forest);
+}
+
+@media (min-width: 768px) {
+  .contact-methods-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .form-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* =========================
+   FUTURE
+========================= */
+
+.future-grid {
+  margin-top: 3rem;
+}
+
+.future-card {
+  border-radius: 1.5rem;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  background: white;
+  padding: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--forest);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.05);
+}
+
+/* =========================
+   CTA
+========================= */
+
+.cta-section {
+  background: white;
+}
+
+.cta-card {
+  max-width: 64rem;
+  margin: 0 auto;
+  border-radius: 2.5rem;
+  background: var(--forest);
+  color: white;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+.about-hero {
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.32),
+      rgba(24, 53, 39, 0.58),
+      rgba(24, 53, 39, 0.9)
+    ),
+    url("/images/arkansas-hero.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (min-width: 768px) {
+  .section-paper,
+  .section-white,
+  .advertising-section,
+  .cta-section {
+    padding: 7rem 2.5rem;
+  }
+
+  .container-grid,
+  .advertising-grid {
+    grid-template-columns: 1fr 0.85fr;
+    align-items: center;
+  }
+
+  .trust-strip-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .trust-strip-item {
+    border-bottom: 0;
+    border-right: 1px solid rgb(0 0 0 / 0.08);
+  }
+
+  .trust-strip-item:last-child {
+    border-right: 0;
+  }
+
+  .section-heading-row {
+    flex-direction: row;
+    align-items: end;
+    justify-content: space-between;
+  }
+
+  .network-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .future-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .cta-card {
+    padding: 4rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .network-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
