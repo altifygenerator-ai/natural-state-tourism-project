@@ -18,13 +18,14 @@ const body = Manrope({
 });
 
 const siteUrl = "https://naturalstatetourismproject.org";
+const ogImage = `${siteUrl}/images/natural-state-og.png`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 
   verification: {
-  google: "FreW2NoyKjt3MqR9omPpGDeNElSGvbA_xTIHW6Hgc4w",
-},
+    google: "FreW2NoyKjt3MqR9omPpGDeNElSGvbA_xTIHW6Hgc4w",
+  },
 
   title: {
     default:
@@ -58,10 +59,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/images/og-image.jpg",
+        url: ogImage,
         width: 1200,
         height: 630,
-        alt: "Natural State Tourism Project",
+        alt: "Natural State Tourism Project Arkansas tourism guide network",
       },
     ],
   },
@@ -71,7 +72,11 @@ export const metadata: Metadata = {
     title: "Natural State Tourism Project",
     description:
       "Independent Arkansas tourism guide network helping travelers discover local towns and businesses.",
-    images: ["/images/og-image.png"],
+    images: [ogImage],
+  },
+
+  icons: {
+    icon: "/favicon.ico",
   },
 
   alternates: {
