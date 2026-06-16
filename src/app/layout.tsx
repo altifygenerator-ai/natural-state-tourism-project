@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     title: "Natural State Tourism Project",
     description:
       "Independent Arkansas tourism guide network helping travelers discover local towns and businesses.",
-    images: ["/images/og-image.jpg"],
+    images: ["/images/og-image.png"],
   },
 
   alternates: {
