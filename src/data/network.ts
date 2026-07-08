@@ -30,14 +30,14 @@ export const networkSites = [
     image: "/images/amity-guide.png",
     status: "Active Guide",
     description:
-      "A smaller local guide for Amity with room to grow as the network continues expanding across Arkansas.",
+      "A smaller local guide for Amity, local businesses, nearby Glenwood traffic, Caddo River access, and quiet Arkansas stops.",
   },
   {
     name: "Murfreesboro Arkansas Guide",
-    href: "#",
-    image: "/images/murfreesboro-guide.jpg",
-    status: "Coming Soon",
+    href: "https://murfreesboroarkansas.org",
+    image: "/images/arkansas-scenic.webp",
+    status: "Active Guide",
     description:
-      "Planned future guide focused around Crater of Diamonds, local tourism, lodging, food, and family travel.",
+      "A local guide for Murfreesboro, Crater of Diamonds, Lake Greeson, lodging, food, shops, and family travel.",
   },
 ];

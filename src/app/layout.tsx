@@ -20,6 +20,23 @@ const body = Manrope({
 const siteUrl = "https://naturalstatetourismproject.org";
 const ogImage = `${siteUrl}/images/natural-state-og.png`;
 
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Natural State Tourism Project",
+  url: siteUrl,
+  logo: `${siteUrl}/images/logo.png`,
+  description:
+    "An independent Arkansas tourism guide network helping travelers discover local towns, attractions, restaurants, lodging, events, outdoor spots, and small businesses.",
+  sameAs: [
+    "https://hotspringsarkansas.org",
+    "https://glenwoodarkansas.org",
+    "https://mountidaarkansas.org",
+    "https://amityarkansas.org",
+    "https://murfreesboroarkansas.org",
+  ],
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 
@@ -46,6 +63,9 @@ export const metadata: Metadata = {
     "Glenwood Arkansas guide",
     "Mount Ida Arkansas guide",
     "Amity Arkansas guide",
+    "Murfreesboro Arkansas guide",
+    "Crater of Diamonds guide",
+    "Lake Greeson guide",
     "Arkansas tourism advertising",
     "Arkansas featured business listings",
   ],
@@ -92,6 +112,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${heading.variable} ${body.variable}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationSchema).replace(/</g, "\\u003c"),
+          }}
+        />
         <Header />
         <main>{children}</main>
         <Footer />

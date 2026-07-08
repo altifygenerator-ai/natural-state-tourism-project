@@ -37,8 +37,8 @@ export default function ContactForm() {
             Featured placement and partnership inquiries.
           </h2>
           <p className="section-lead">
-            Reach out regarding featured placement opportunities, dedicated
-            business pages, tourism partnerships, or future regional sponsorships.
+            Reach out regarding featured placement opportunities, business spotlight pages, tourism
+            partnerships, or future regional sponsorships.
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export default function ContactForm() {
             <label htmlFor="inquiryType">Inquiry Type</label>
             <select id="inquiryType" name="inquiryType">
               <option>Featured Placement</option>
-              <option>Dedicated Business Page</option>
+              <option>Business Spotlight Page</option>
               <option>Regional Partnership</option>
               <option>General Business Inquiry</option>
             </select>

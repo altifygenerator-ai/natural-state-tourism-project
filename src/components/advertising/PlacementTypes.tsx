@@ -5,8 +5,8 @@ const items = [
     text: "Larger highlighted placements throughout tourism guide pages with stronger visibility and imagery.",
   },
   {
-    title: "Dedicated Business Pages",
-    text: "Featured partners can receive a full internal business page inside the tourism guide network.",
+    title: "Business Spotlight Pages",
+    text: "Featured partners can receive a dedicated visitor-facing spotlight page inside the tourism guide network.",
   },
   {
     title: "Category Visibility",
@@ -22,7 +22,7 @@ const items = [
   },
   {
     title: "Locally Focused Partnerships",
-    text: "Partnerships are focused primarily on Arkansas businesses connected to tourism and local discovery.",
+    text: "Partnerships are focused on Arkansas businesses connected to tourism, local discovery, and useful visitor planning.",
   },
 ];
 

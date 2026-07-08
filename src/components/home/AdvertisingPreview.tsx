@@ -16,8 +16,8 @@ export default function AdvertisingPreview() {
 
           <p className="section-text-light">
             Businesses can partner with the Natural State Tourism Project for
-            larger featured spots, stronger category visibility, and dedicated
-            pages inside the tourism guide network.
+            featured placement, stronger category visibility, and dedicated
+            spotlight pages inside the tourism guide network.
           </p>
 
           <Link href="/advertising" className="btn-gold">
@@ -44,7 +44,7 @@ export default function AdvertisingPreview() {
 
           <p className="card-text-dark">
             Featured partners can receive larger placements, photos, direct
-            links, and dedicated business pages inside the local guide.
+            links, and dedicated spotlight pages inside the local guide.
           </p>
         </div>
       </div>

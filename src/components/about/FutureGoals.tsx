@@ -18,8 +18,8 @@ export default function FutureGoals() {
 
         <div className="future-grid">
           <div className="future-card">
-            Finish expanding Hot Springs into a large-scale tourism guide with
-            broader lodging, food, attraction, and business coverage.
+            Keep expanding Hot Springs into a larger tourism guide with broader
+            lodging, food, attraction, and business coverage.
           </div>
 
           <div className="future-card">
@@ -33,8 +33,8 @@ export default function FutureGoals() {
           </div>
 
           <div className="future-card">
-            Build the future Murfreesboro guide around Crater of Diamonds,
-            tourism, lodging, food, and local attractions.
+            Grow the Murfreesboro guide around Crater of Diamonds, Lake Greeson,
+            lodging, food, family travel, and local attractions.
           </div>
 
           <div className="future-card">

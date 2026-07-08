@@ -22,11 +22,12 @@ export default function NetworkPreview() {
         </div>
 
         <div className="network-grid">
-          {networkSites.slice(0, 4).map((site) => (
+          {networkSites.map((site) => (
             <Link
               key={site.name}
               href={site.href}
               target="_blank"
+              rel="noopener noreferrer"
               className="network-card"
             >
               <div className="network-image-wrap">

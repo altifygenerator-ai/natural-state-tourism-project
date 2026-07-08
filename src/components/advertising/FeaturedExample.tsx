@@ -12,7 +12,7 @@ export default function FeaturedExample() {
 
           <p className="section-text-light">
             Featured businesses can receive larger visual sections, direct
-            linking, image-driven presentation, and internal business pages
+            linking, image-driven presentation, and spotlight pages
             built into the tourism guides.
           </p>
         </div>
@@ -36,7 +36,7 @@ export default function FeaturedExample() {
 
           <p className="card-text-dark">
             Example of a featured lodging placement with stronger visibility,
-            imagery, and dedicated business coverage.
+            imagery, and dedicated visitor-facing coverage.
           </p>
         </div>
       </div>

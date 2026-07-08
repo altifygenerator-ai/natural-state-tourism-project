@@ -11,11 +11,11 @@ export default function PartnerCTA() {
 
         <p className="section-text-light centered">
           Reach out for featured placement opportunities, dedicated business
-          pages, partnerships, or future regional sponsorship discussions.
+          spotlight pages, partnerships, or future regional sponsorship discussions.
         </p>
 
         <div className="hero-actions">
-          <a href="mailto:Naturalstatetourismproject@gmail.com" className="btn-gold">
+          <a href="mailto:naturalstatetourismproject@gmail.com" className="btn-gold">
             Contact Us
           </a>
         </div>

@@ -18,7 +18,7 @@ export default function ContactMethods() {
 
         <div className="contact-methods-grid">
           <a
-            href="mailto:contact@naturalstatetourismproject.com"
+            href="mailto:naturalstatetourismproject@gmail.com"
             className="contact-method-card"
           >
             <p className="card-eyebrow">General Contact</p>
@@ -33,7 +33,7 @@ export default function ContactMethods() {
           </a>
 
           <a
-            href="mailto:advertising@naturalstatetourismproject.com"
+            href="mailto:naturalstatetourismproject@gmail.com"
             className="contact-method-card"
           >
             <p className="card-eyebrow">Advertising</p>
@@ -43,7 +43,7 @@ export default function ContactMethods() {
             </h3>
 
             <p className="card-text">
-              Featured placement opportunities, dedicated business pages, and
+              Featured placement opportunities, business spotlight pages, and
               future sponsorship discussions.
             </p>
           </a>

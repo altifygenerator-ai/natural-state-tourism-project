@@ -14,7 +14,7 @@ export default function CTASection() {
         </h2>
 
         <p className="section-text-light centered">
-          Reach out for advertising, featured placement, partnerships,
+          Reach out for advertising, featured placement, spotlight pages, partnerships,
           suggestions, or future Arkansas guide coverage ideas.
         </p>
 

@@ -18,6 +18,10 @@ const networkLinks = [
     name: "Amity",
     href: "https://amityarkansas.org",
   },
+  {
+    name: "Murfreesboro",
+    href: "https://murfreesboroarkansas.org",
+  },
 ];
 
 const companyLinks = [
@@ -71,6 +75,7 @@ export default function Footer() {
                 key={link.name}
                 href={link.href}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="text-white/70 transition hover:text-[var(--gold)]"
               >
                 {link.name} Arkansas Guide
@@ -96,7 +101,7 @@ export default function Footer() {
             ))}
 
             <a
-              href="mailto:contact@naturalstatetourismproject.com"
+              href="mailto:naturalstatetourismproject@gmail.com"
               className="text-white/70 transition hover:text-[var(--gold)]"
             >
               naturalstatetourismproject@gmail.com
@@ -117,7 +122,7 @@ export default function Footer() {
     </p>
 
     <a
-      href="https://hometownwebservicesar.cc"
+      href="https://hometownwebservicesar.com"
       target="_blank"
       rel="noopener noreferrer"
       className="transition hover:text-white"

@@ -3,10 +3,9 @@ const items = [
   "Hot Springs is the flagship guide and will continue growing into the largest current coverage area.",
   "Glenwood and Mount Ida will keep getting stronger lodging, food, outdoor, and local business coverage.",
   "Amity will stay smaller but can grow around niche local ideas, community history, and nearby discovery.",
-  "Murfreesboro is planned next with Crater of Diamonds, family travel, lodging, food, and local attractions.",
-"Expand outward to complete stronger regional coverage across Central Arkansas before moving into wider statewide expansion.",
-
-"Long term, the vision is to eventually connect tourism guides across all major Arkansas regions, with Little Rock becoming one of the final major pieces of the network.",
+  "Murfreesboro is now live with coverage around Crater of Diamonds, Lake Greeson, lodging, food, and family travel.",
+  "Expand outward to complete stronger regional coverage across Central Arkansas before moving into wider statewide expansion.",
+  "Long term, the vision is to eventually connect tourism guides across all major Arkansas regions, with Little Rock becoming one of the final major pieces of the network.",
 ];
 
 export default function ExpansionMap() {

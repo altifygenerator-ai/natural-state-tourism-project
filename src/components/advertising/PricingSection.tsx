@@ -1,19 +1,18 @@
-// src/components/advertising/PricingSection.tsx
 const pricing = [
   {
-    title: "Standard Featured Placement",
-    price: "Starting around $50-$150",
-    text: "Featured visibility placement inside local tourism guide pages depending on category and location.",
+    title: "Basic Business Listing",
+    price: "Free when it fits the guide",
+    text: "A simple listing for local businesses, stays, restaurants, attractions, and shops that make sense for one of the current Arkansas guides.",
   },
   {
-    title: "Dedicated Business Pages",
-    price: "Custom Pricing",
-    text: "Full internal spotlight pages with photos, information, direct links, and expanded business coverage.",
+    title: "Featured Placement",
+    price: "$20/month",
+    text: "Higher visibility inside the matching local guide, with stronger placement in the category where visitors are already looking.",
   },
   {
-    title: "Future Regional Sponsorships",
-    price: "Planned Expansion",
-    text: "Larger future sponsorship opportunities tied to regional growth and expanded tourism coverage.",
+    title: "Business Spotlight Page",
+    price: "$100 one time",
+    text: "A dedicated spotlight page with a fuller write-up, photos, direct links, visitor-focused details, and a Natural State social post.",
   },
 ];
 
@@ -25,12 +24,12 @@ export default function PricingSection() {
           <p className="eyebrow">Pricing & Partnerships</p>
 
           <h2 className="section-title">
-            Flexible options while the network grows.
+            Simple options for local businesses.
           </h2>
 
           <p className="section-lead">
-            Pricing may vary depending on placement type, guide size, category,
-            and future expansion opportunities.
+            Featured placement and spotlight pages are built to fit naturally
+            inside the guides while helping visitors find useful local places.
           </p>
         </div>
 
