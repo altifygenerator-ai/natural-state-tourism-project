@@ -1,11 +1,10 @@
-// src/components/network/ExpansionMap.tsx
 const items = [
-  "Hot Springs is the flagship guide and will continue growing into the largest current coverage area.",
-  "Glenwood and Mount Ida will keep getting stronger lodging, food, outdoor, and local business coverage.",
-  "Amity will stay smaller but can grow around niche local ideas, community history, and nearby discovery.",
-  "Murfreesboro is now live with coverage around Crater of Diamonds, Lake Greeson, lodging, food, and family travel.",
-  "Expand outward to complete stronger regional coverage across Central Arkansas before moving into wider statewide expansion.",
-  "Long term, the vision is to eventually connect tourism guides across all major Arkansas regions, with Little Rock becoming one of the final major pieces of the network.",
+  "Hot Springs remains the largest guide and needs frequent event, attraction, lodging, restaurant, and local-business maintenance.",
+  "Glenwood and Mount Ida are the outdoor-travel anchors of the current network, with the Caddo River, Lake Ouachita, cabins, food, and recreation driving most of their useful coverage.",
+  "Amity stays intentionally smaller and community-focused, with room for local history, nearby discovery, businesses, and small-town travel ideas.",
+  "Murfreesboro is active around Crater of Diamonds, Lake Greeson, lodging, food, family travel, and high-intent visitor planning.",
+  "The five guides should link together where a real trip naturally crosses town lines instead of forcing visitors into isolated destination pages.",
+  "New town guides can be added when there is enough local depth to keep them useful and maintained; statewide expansion is a long-term direction, not a fixed rollout schedule.",
 ];
 
 export default function ExpansionMap() {
@@ -13,15 +12,16 @@ export default function ExpansionMap() {
     <section className="section-paper">
       <div className="container">
         <div className="section-heading">
-          <p className="eyebrow">Expansion Path</p>
+          <p className="eyebrow">Network Direction</p>
 
           <h2 className="section-title">
-            Focused growth before spreading too wide.
+            Maintain what is live, connect the region, then expand carefully.
           </h2>
 
           <p className="section-lead">
-            The goal is to make each guide feel useful and real before adding
-            too many new towns.
+            The project works better when each local guide earns its place with
+            useful visitor information instead of expanding just to make the
+            network look bigger.
           </p>
         </div>
 

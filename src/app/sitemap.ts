@@ -1,37 +1,37 @@
-// src/app/sitemap.ts
 import type { MetadataRoute } from "next";
 
-const siteUrl = "https://naturalstatetourismproject.org";
+const siteUrl = "https://www.naturalstatetourismproject.org";
+const contentUpdated = new Date("2026-09-20T00:00:00-05:00");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
       url: siteUrl,
-      lastModified: new Date(),
+      lastModified: contentUpdated,
       changeFrequency: "weekly",
       priority: 1,
     },
     {
       url: `${siteUrl}/about`,
-      lastModified: new Date(),
+      lastModified: contentUpdated,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
       url: `${siteUrl}/network`,
-      lastModified: new Date(),
+      lastModified: contentUpdated,
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
       url: `${siteUrl}/advertising`,
-      lastModified: new Date(),
+      lastModified: contentUpdated,
       changeFrequency: "monthly",
       priority: 0.85,
     },
     {
       url: `${siteUrl}/contact`,
-      lastModified: new Date(),
+      lastModified: contentUpdated,
       changeFrequency: "monthly",
       priority: 0.7,
     },

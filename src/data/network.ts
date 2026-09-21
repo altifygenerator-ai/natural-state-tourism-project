@@ -1,43 +1,42 @@
-// src/data/network.ts
 export const networkSites = [
   {
     name: "Hot Springs Arkansas Guide",
-    href: "https://hotspringsarkansas.org",
+    href: "https://www.hotspringsarkansas.org",
     image: "/images/hot-springs-guide.png",
     status: "Active Guide",
     description:
-      "A growing guide for Hot Springs attractions, restaurants, lodging, local businesses, and trip planning.",
+      "A growing Hot Springs guide covering attractions, restaurants, lodging, events, local businesses, Bathhouse Row, Lake Hamilton, and trip planning.",
   },
   {
     name: "Glenwood Arkansas Guide",
-    href: "https://glenwoodarkansas.org",
+    href: "https://www.glenwoodarkansas.org",
     image: "/images/glenwood-guide.png",
     status: "Active Guide",
     description:
-      "A local guide focused on Glenwood businesses, places to eat, outdoor recreation, cabins, and area travel.",
+      "A local Glenwood guide for the Caddo River, places to eat, cabins, outdoor recreation, events, local businesses, and area travel.",
   },
   {
     name: "Mount Ida Arkansas Guide",
-    href: "https://mountidaarkansas.org",
+    href: "https://www.mountidaarkansas.org",
     image: "/images/mount-ida-guide.png",
     status: "Active Guide",
     description:
-      "A tourism guide for Mount Ida, Lake Ouachita, crystal country, local stays, restaurants, and things to do.",
+      "A Mount Ida guide focused on Lake Ouachita, quartz crystal country, cabins, restaurants, outdoor stops, events, and visitor planning.",
   },
   {
     name: "Amity Arkansas Guide",
-    href: "https://amityarkansas.org",
+    href: "https://www.amityarkansas.org",
     image: "/images/amity-guide.png",
     status: "Active Guide",
     description:
-      "A smaller local guide for Amity, local businesses, nearby Glenwood traffic, Caddo River access, and quiet Arkansas stops.",
+      "A smaller community-focused guide for Amity, nearby outdoor stops, local businesses, area history, and southwest Arkansas discovery.",
   },
   {
     name: "Murfreesboro Arkansas Guide",
-    href: "https://murfreesboroarkansas.org",
+    href: "https://www.murfreesboroarkansas.org",
     image: "/images/arkansas-scenic.webp",
     status: "Active Guide",
     description:
-      "A local guide for Murfreesboro, Crater of Diamonds, Lake Greeson, lodging, food, shops, and family travel.",
+      "A Murfreesboro guide for Crater of Diamonds, Lake Greeson, lodging, food, local businesses, family travel, and nearby outdoor stops.",
   },
 ];

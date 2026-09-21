@@ -1,11 +1,10 @@
-// src/components/home/FutureExpansion.tsx
 const items = [
-  "More Arkansas town guides",
-  "Expanded lodging coverage",
-  "Featured business pages",
-  "Regional travel resources",
-  "Tourism partnerships",
-  "Community suggestions",
+  "Keep the five current town guides fresh and useful",
+  "Strengthen lodging, food, event, and outdoor coverage",
+  "Build deeper visitor-focused local business pages",
+  "Connect nearby towns into useful regional trip planning",
+  "Grow partnerships only where they fit the guides",
+  "Use community suggestions to find missing local stops",
 ];
 
 export default function FutureExpansion() {
@@ -13,15 +12,17 @@ export default function FutureExpansion() {
     <section className="section-paper">
       <div className="container">
         <div className="section-heading">
-          <p className="eyebrow">Future Expansion</p>
+          <p className="eyebrow">What We’re Building Next</p>
 
           <h2 className="section-title">
-            Built to grow into a wider Arkansas tourism network.
+            Stronger local guides first, wider expansion second.
           </h2>
 
           <p className="section-lead">
-            The goal is to continue expanding coverage across Arkansas with
-            modern, useful, community-focused tourism guides.
+            Hot Springs, Glenwood, Mount Ida, Amity, and Murfreesboro are all
+            live. The current priority is keeping those guides accurate,
+            expanding the useful local detail inside them, and connecting the
+            region better before adding a long list of new towns.
           </p>
         </div>
 

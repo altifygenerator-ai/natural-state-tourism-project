@@ -1,4 +1,3 @@
-// src/app/layout.tsx
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import { Playfair_Display, Manrope } from "next/font/google";
@@ -17,7 +16,7 @@ const body = Manrope({
   variable: "--font-body",
 });
 
-const siteUrl = "https://naturalstatetourismproject.org";
+const siteUrl = "https://www.naturalstatetourismproject.org";
 const ogImage = `${siteUrl}/images/natural-state-og.png`;
 
 const organizationSchema = {
@@ -27,13 +26,22 @@ const organizationSchema = {
   url: siteUrl,
   logo: `${siteUrl}/images/logo.png`,
   description:
-    "An independent Arkansas tourism guide network helping travelers discover local towns, attractions, restaurants, lodging, events, outdoor spots, and small businesses.",
-  sameAs: [
-    "https://hotspringsarkansas.org",
-    "https://glenwoodarkansas.org",
-    "https://mountidaarkansas.org",
-    "https://amityarkansas.org",
-    "https://murfreesboroarkansas.org",
+    "An independent Arkansas tourism guide network connecting local visitor guides for Hot Springs, Glenwood, Mount Ida, Amity, and Murfreesboro.",
+  areaServed: {
+    "@type": "State",
+    name: "Arkansas",
+  },
+  knowsAbout: [
+    "Arkansas travel",
+    "Arkansas tourism",
+    "Hot Springs Arkansas",
+    "Glenwood Arkansas",
+    "Mount Ida Arkansas",
+    "Amity Arkansas",
+    "Murfreesboro Arkansas",
+    "Crater of Diamonds State Park",
+    "Lake Greeson",
+    "Lake Ouachita",
   ],
 };
 
@@ -51,7 +59,7 @@ export const metadata: Metadata = {
   },
 
   description:
-    "Natural State Tourism Project is an independent Arkansas tourism guide network helping travelers discover local towns, attractions, restaurants, lodging, and small businesses.",
+    "Natural State Tourism Project is an independent Arkansas tourism guide network connecting local guides for Hot Springs, Glenwood, Mount Ida, Amity, and Murfreesboro with visitor planning and local business discovery.",
 
   keywords: [
     "Natural State Tourism Project",
@@ -73,7 +81,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Natural State Tourism Project",
     description:
-      "An independent Arkansas tourism guide network built to help travelers discover local towns and small businesses.",
+      "An independent Arkansas tourism guide network connecting five active local visitor guides and the businesses travelers need along the way.",
     url: siteUrl,
     siteName: "Natural State Tourism Project",
     type: "website",
@@ -91,7 +99,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Natural State Tourism Project",
     description:
-      "Independent Arkansas tourism guide network helping travelers discover local towns and businesses.",
+      "Independent Arkansas tourism guide network connecting Hot Springs, Glenwood, Mount Ida, Amity, and Murfreesboro.",
     images: [ogImage],
   },
 

@@ -1,26 +1,25 @@
-// src/components/layout/Footer.tsx
 import Link from "next/link";
 
 const networkLinks = [
   {
     name: "Hot Springs",
-    href: "https://hotspringsarkansas.org",
+    href: "https://www.hotspringsarkansas.org",
   },
   {
     name: "Glenwood",
-    href: "https://glenwoodarkansas.org",
+    href: "https://www.glenwoodarkansas.org",
   },
   {
     name: "Mount Ida",
-    href: "https://mountidaarkansas.org",
+    href: "https://www.mountidaarkansas.org",
   },
   {
     name: "Amity",
-    href: "https://amityarkansas.org",
+    href: "https://www.amityarkansas.org",
   },
   {
     name: "Murfreesboro",
-    href: "https://murfreesboroarkansas.org",
+    href: "https://www.murfreesboroarkansas.org",
   },
 ];
 
@@ -53,8 +52,9 @@ export default function Footer() {
           </h2>
 
           <p className="mt-6 max-w-xl leading-8 text-white/70">
-            Helping travelers discover Arkansas while giving local businesses
-            stronger visibility through modern tourism-focused local guides.
+            Connecting five active local Arkansas guides while helping travelers
+            discover useful stops and giving local businesses stronger
+            visitor-facing visibility.
           </p>
 
           <p className="mt-6 text-sm leading-7 text-white/45">
@@ -110,27 +110,27 @@ export default function Footer() {
         </div>
       </div>
 
-   <div className="border-t border-white/10">
-  <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 text-sm text-white/45 md:flex-row md:items-center md:justify-between md:px-10">
-    <p>
-      © {new Date().getFullYear()} Natural State Tourism Project. All
-      rights reserved.
-    </p>
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 text-sm text-white/45 md:flex-row md:items-center md:justify-between md:px-10">
+          <p>
+            © {new Date().getFullYear()} Natural State Tourism Project. All
+            rights reserved.
+          </p>
 
-    <p>
-      Built to support Arkansas towns, tourism, and local businesses.
-    </p>
+          <p>
+            Built to support Arkansas towns, tourism, and local businesses.
+          </p>
 
-    <a
-      href="https://hometownwebservicesar.com"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="transition hover:text-white"
-    >
-      Built by Hometown Web Services
-    </a>
-  </div>
-</div>
+          <a
+            href="https://www.hometownwebservicesar.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition hover:text-white"
+          >
+            Built by Hometown Web Services
+          </a>
+        </div>
+      </div>
     </footer>
   );
 }

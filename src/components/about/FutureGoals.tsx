@@ -1,50 +1,51 @@
-// src/components/about/FutureGoals.tsx
 export default function FutureGoals() {
   return (
     <section className="section-paper">
       <div className="container">
         <div className="section-heading">
-          <p className="eyebrow">Path Forward</p>
+          <p className="eyebrow">Current Priorities</p>
 
           <h2 className="section-title">
-            Continuing to grow the network one Arkansas town at a time.
+            Build depth in the network we already have.
           </h2>
 
           <p className="section-lead">
-            The current focus is building out stronger, more complete local
-            guides while continuing to expand the network across Arkansas.
+            The network now has five active town guides. The next phase is less
+            about collecting domains and more about making those guides more
+            useful, current, connected, and valuable to both visitors and local
+            businesses.
           </p>
         </div>
 
         <div className="future-grid">
           <div className="future-card">
-            Keep expanding Hot Springs into a larger tourism guide with broader
-            lodging, food, attraction, and business coverage.
+            Keep Hot Springs current across events, lodging, restaurants,
+            attractions, local businesses, and visitor-planning pages.
           </div>
 
           <div className="future-card">
-            Continue filling out Glenwood and Mount Ida with stronger local
-            content, outdoor recreation coverage, and featured businesses.
+            Continue strengthening Glenwood around the Caddo River, cabins,
+            food, events, local businesses, and nearby outdoor travel.
           </div>
 
           <div className="future-card">
-            Explore more niche local ideas and opportunities for Amity while
-            keeping the guide community-focused.
+            Build Mount Ida deeper around Lake Ouachita, crystal mining,
+            cabins, outdoor recreation, food, events, and weekend planning.
           </div>
 
           <div className="future-card">
-            Grow the Murfreesboro guide around Crater of Diamonds, Lake Greeson,
-            lodging, food, family travel, and local attractions.
+            Keep Amity community-focused while improving useful nearby travel,
+            local business, history, and small-town discovery content.
           </div>
 
           <div className="future-card">
-            Expand featured business pages and tourism partnerships across the
-            network over time.
+            Grow Murfreesboro around high-intent Crater of Diamonds planning,
+            Lake Greeson, lodging, food, family travel, and local businesses.
           </div>
 
           <div className="future-card">
-            Keep building a modern Arkansas-focused tourism network designed for
-            long-term growth and local discovery.
+            Add new Arkansas coverage deliberately when there is enough useful
+            local information to build a real guide instead of a thin page.
           </div>
         </div>
       </div>
