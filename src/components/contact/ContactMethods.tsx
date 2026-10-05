@@ -1,3 +1,4 @@
+import styles from "./ContactMethods.module.css";
 // src/components/contact/ContactMethods.tsx
 export default function ContactMethods() {
   return (
@@ -16,7 +17,7 @@ export default function ContactMethods() {
           </p>
         </div>
 
-        <div className="contact-methods-grid">
+        <div className={`contact-methods-grid ${styles.methods}`}>
           <a
             href="mailto:naturalstatetourismproject@gmail.com"
             className="contact-method-card"
