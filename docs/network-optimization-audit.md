@@ -1,0 +1,20 @@
+# Natural State network optimization — 2026-10-05
+
+Baseline: October 2 Search Console exports (September 2–29, 28 days): Glenwood 272 clicks / 15,313 impressions (1.78%); Hot Springs 343 / 34,050 (1.01%); Mount Ida 212 / 13,171 (1.61%); Murfreesboro 26 / 4,510 (0.58%). Total: 853 clicks / 67,044 impressions. No comparable Amity export. Page impressions overlap; do not sum them as network impressions. Query exports are site-wide, not page/query pairs; intent matches are informed by page content, not assumed query attribution.
+
+| Site / source revision | Existing design and reuse | Priority pages and connections | CSS / mobile risks |
+| --- | --- | --- | --- |
+| Glenwood / 1ad1d89 | App Router; cream/forest tokens; Inter/Playfair; rounded btn; Tailwind cards; tourism Section; deterministic PlanMyDayTool; TrackedFeatureLink | Explore, kids, pond, river/weekend, homepage, food and stays. Quick choices, meal anchors, post-activity paths. | Inherited title duplicates branding; large hero plus sticky search. Scoped styles, wrapping links, existing tokens. |
+| Hot Springs / dac3fd0 | src/app; warm neutral/green/rust tokens; Arial; Hero, BusinessDirectoryPage, shopping components, RelatedLocalLinks | Lake Hamilton dining; antiques/thrift/flea hubs and lists; downtown food/shopping; Bathhouse Row. | Homepage uses undefined btn; Articles dropdown can overflow. Native secondary buttons, isolated header fix. Preserve specialist shopping identity. |
+| Mount Ida / e148c29 | App Router; natural cream/forest; Inter/Playfair; quick-link cards; SeoGuidePage; data/seoGuides | Restaurants, crystals, lake, weekend. Surface existing planning links earlier; contextual next steps. | Large global CSS and utility overrides; avoid duplicate planning sections. Preserve businessClickTracking. |
+| Murfreesboro / 550ddad | App Router; cream/forest/rust; Inter/Playfair; GuidePage, CTABox, Hero; data/guides | Crater → after digging → food, supplies, lake, stays and family. | Position around 12 needs authority and routing, not only snippets. No local events route: do not invent it. |
+| Amity / 575e4ca | App Router; green/brown/river tokens; system sans/Georgia; button-row, split-grid, BusinessCard | Small local chooser and river-day next steps; food and local activity titles. | Keep quiet/simple scope, market is postponed. Preserve direct River View ad; no planner or complex filters. |
+| Hub / 9a8fb44 | src/app; forest/gold/paper; Manrope/Playfair; NetworkPreview, TownCard, networkSites | Destination/interest chooser into existing local guides. | Preserve network/corporate identity; leave pricing and contact flows intact. |
+
+All six checkouts were clean before edits, and source revisions remain unchanged from the initial audit. Recent spam protection and River View tracking changes are retained. No dependency/framework upgrades, URL migrations, canonical changes, map layer, AI or backend. Existing metadataBase, canonicals, JSON-LD, sitemap, robots and route structure stay in place. Selected titles use absolute metadata to avoid inherited duplicate suffixes; generic pages retain current templates.
+
+New styling is isolated in CSS Modules, reusing each site's own buttons, tokens, typography and containers. No broad global CSS additions. New paths are semantic links with visible keyboard focus and 44px targets. Restaurant jump destinations clear sticky headers. Responsive checks cover 1440 desktop, 1280 laptop, 768 tablet, 360 Android and 390 iPhone.
+
+Advanced interaction decision: defer maps and a network-wide Build My Day. Existing content and lightweight route choices provide the immediate benefit. Improve Glenwood's existing planner with accessible selected states, meaningful result links and deterministic time/group routing.
+
+Verification limitation: production secrets marked sensitive cannot be read through the connected app. Local QA uses ignored preview-only environment values and empty event fixtures; no live database writes, emails or submissions. Verify populated events and form delivery in an environment-backed preview before release.

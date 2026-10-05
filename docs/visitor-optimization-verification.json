@@ -1,0 +1,23 @@
+{
+  "source": "9a8fb44410b680138c1e3ce382b2098a7d496ba8",
+  "viewportWidths": [
+    360,
+    390,
+    768,
+    1280,
+    1440
+  ],
+  "checkedRoutes": [
+    "/",
+    "/advertising",
+    "/contact",
+    "/network"
+  ],
+  "responsiveChecks": 20,
+  "internalDestinations": 5,
+  "runtimeErrors": 0,
+  "missingJumpTargets": 0,
+  "overflowChecksFailed": 0,
+  "localQAUsesEmptyEventFixtures": true,
+  "liveSubmissionsTested": false
+}

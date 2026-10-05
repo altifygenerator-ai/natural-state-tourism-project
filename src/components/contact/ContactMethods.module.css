@@ -1,0 +1,6 @@
+.methods :global(.contact-method-card) {
+  min-width: 0;
+}
+.methods :global(.card-title) {
+  overflow-wrap: anywhere;
+}

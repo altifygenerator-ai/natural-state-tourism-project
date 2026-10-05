@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Chooser keyboard focus and 44px tap target",
+    "height": 55,
+    "outline": "solid",
+    "outlineWidth": "3px"
+  },
+  {
+    "name": "Mobile menu keyboard open, routing and close",
+    "passed": true
+  }
+]
