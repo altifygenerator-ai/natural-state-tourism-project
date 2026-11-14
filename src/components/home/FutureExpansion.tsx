@@ -14,9 +14,9 @@ export default function FutureExpansion() {
             Better local guides, one town at a time.
           </h2>
           <p className="section-lead">
-            We're focused on Hot Springs, Glenwood, Mount Ida, Murfreesboro and
+            We&apos;re focused on Hot Springs, Glenwood, Mount Ida, Murfreesboro and
             Amity. Good local details matter more than adding dozens of towns
-            before we're ready to do them justice.
+            before we&apos;re ready to do them justice.
           </p>
         </div>
         <div className="future-grid">
