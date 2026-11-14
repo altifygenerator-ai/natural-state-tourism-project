@@ -6,14 +6,14 @@ import ExpansionMap from "@/components/network/ExpansionMap";
 import CTASection from "@/components/home/CTASection";
 
 export const metadata: Metadata = {
-  title: "Arkansas Tourism Guide Network",
+  title: "Arkansas Travel Guides for Five Ouachita Area Towns",
   description:
-    "Explore the Natural State Tourism Project network, including Hot Springs, Glenwood, Mount Ida, Amity, and Murfreesboro Arkansas guide sites.",
+    "Choose a local guide to Hot Springs, Glenwood, Mount Ida, Amity, or Murfreesboro. Find things to do, places to stay, and stops to pair on an Arkansas road trip.",
   alternates: {
     canonical: "/network",
   },
   openGraph: {
-    title: "Arkansas Tourism Guide Network",
+    title: "Arkansas Travel Guides for Five Ouachita Area Towns",
     description:
       "Explore active Arkansas guide sites from the Natural State Tourism Project.",
     url: "/network",
