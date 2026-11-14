@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/nstp-directory",
+      "schedule": "0 14 * * *"
+    }
+  ]
+}
