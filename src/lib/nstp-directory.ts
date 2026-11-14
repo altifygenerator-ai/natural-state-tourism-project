@@ -87,7 +87,7 @@ export function cleanChanges(value: unknown): Record<string, string> {
 export function safePublicUrl(value: string) {
   try {
     const url = new URL(value);
-    const host = url.hostname.toLowerCase().replace(/^\\[/, "").replace(/\\]$/, "");
+    const host = url.hostname.toLowerCase().replaceAll("[", "").replaceAll("]", "");
     return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password
       && !isIP(host) && host !== "localhost" && !host.endsWith(".local")
       && !host.endsWith(".internal") && !host.endsWith(".localhost")
