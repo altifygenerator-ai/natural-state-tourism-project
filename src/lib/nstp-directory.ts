@@ -44,6 +44,11 @@ function safeEqual(a: string, b: string) {
   const x = Buffer.from(a); const y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
 }
+export function requestFingerprint(req: NextRequest): string | null {
+  const remote = (req.headers.get("x-vercel-forwarded-for") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
+  if (!remote || remote.length > 80) return null;
+  return createHmac("sha256", required("NSTP_TOKEN_SECRET")).update("claim-source:" + remote).digest("hex");
+}
 export function adminAllowed(req: NextRequest) {
   const expected = process.env.NSTP_ADMIN_KEY;
   const supplied = req.headers.get("x-nstp-admin-key") || "";
