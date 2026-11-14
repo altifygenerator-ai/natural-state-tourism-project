@@ -1,20 +1,8 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
-import { Playfair_Display, Manrope } from "next/font/google";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import "./globals.css";
-
-const heading = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-heading",
-  weight: ["700", "800", "900"],
-});
-
-const body = Manrope({
-  subsets: ["latin"],
-  variable: "--font-body",
-});
 
 const siteUrl = "https://www.naturalstatetourismproject.org";
 const ogImage = `${siteUrl}/images/natural-state-og.png`;
@@ -119,7 +107,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${heading.variable} ${body.variable}`}>
+      <body>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
