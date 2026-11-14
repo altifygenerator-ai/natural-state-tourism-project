@@ -87,9 +87,10 @@ export function cleanChanges(value: unknown): Record<string, string> {
 export function safePublicUrl(value: string) {
   try {
     const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^\\[/, "").replace(/\\]$/, "");
     return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password
-      && !isIP(url.hostname) && !url.hostname.endsWith(".local")
-      && !url.hostname.endsWith(".internal") && !url.hostname.endsWith(".localhost")
+      && !isIP(host) && host !== "localhost" && !host.endsWith(".local")
+      && !host.endsWith(".internal") && !host.endsWith(".localhost")
       && (!url.port || url.port === "443" || url.port === "80");
   } catch { return false; }
 }
