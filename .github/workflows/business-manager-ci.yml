@@ -1,0 +1,34 @@
+name: Business manager checks
+on:
+  push:
+    branches:
+      - feature/business-claim-manager
+  pull_request:
+    paths:
+      - "src/lib/nstp-*"
+      - "src/app/api/directory/**"
+      - "src/app/api/cron/nstp-directory/**"
+      - "src/app/businesses/**"
+      - "src/app/owner/**"
+      - "src/app/claim/**"
+      - "src/app/manage-businesses/**"
+      - "src/components/directory/**"
+      - "tests/**"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: node --test tests/nstp-directory.test.cjs
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
