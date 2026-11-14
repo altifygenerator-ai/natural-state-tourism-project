@@ -137,23 +137,56 @@ async function approvedHost(urlString: string): Promise<URL> {
   }
   return url;
 }
+
 async function readPage(url: URL) {
-  // Never follow redirects: they can change a previously validated public host.
-  const resp = await fetch(url, { signal: AbortSignal.timeout(6500), redirect: "manual",
-    headers: { "User-Agent": "NaturalStateTourismDirectoryBot/1.0 (+https://www.naturalstatetourismproject.org)" } });
-  if (!resp.ok || !(resp.headers.get("content-type") || "").includes("text/html")) return "";
-  const length = Number(resp.headers.get("content-length") || 0);
-  if (length > 300000) return "";
-  return (await resp.text()).slice(0, 300000);
+  const baseDomain = url.hostname.replace(/^www\./, "");
+  let current = url;
+  for (let redirect = 0; redirect < 3; redirect++) {
+    const resp = await fetch(current, { signal: AbortSignal.timeout(6500), redirect: "manual",
+      headers: { "User-Agent": "NaturalStateTourismDirectoryBot/1.0 (+https://www.naturalstatetourismproject.org)" } });
+    if ([301, 302, 303, 307, 308].includes(resp.status)) {
+      const location = resp.headers.get("location");
+      if (!location) return "";
+      const next = await approvedHost(new URL(location, current).href);
+      if (next.hostname.replace(/^www\./, "") !== baseDomain) return "";
+      current = next;
+      continue;
+    }
+    if (!resp.ok || !(resp.headers.get("content-type") || "").includes("text/html")) return "";
+    const length = Number(resp.headers.get("content-length") || 0);
+    if (length > 300000) return "";
+    return (await resp.text()).slice(0, 300000);
+  }
+  return "";
+}
+async function blockedPaths(origin: string): Promise<string[]> {
+  try {
+    const url = await approvedHost(new URL("/robots.txt", origin).href);
+    const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(3500) });
+    if (!response.ok) return [];
+    const text = (await response.text()).slice(0, 40000);
+    const excluded: string[] = [];
+    let applies = false;
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.split("#")[0].trim();
+      const [key, ...rest] = line.split(":");
+      const value = rest.join(":").trim();
+      if (key?.toLowerCase() === "user-agent") applies = value === "*" || /NaturalStateTourismDirectoryBot/i.test(value);
+      if (applies && key?.toLowerCase() === "disallow" && value.startsWith("/")) excluded.push(value);
+    }
+    return excluded;
+  } catch { return []; }
 }
 export async function researchEmails(website: string): Promise<{ email: string; source_url: string; confidence: string }[]> {
   const root = await approvedHost(website);
   if (["facebook.com", "instagram.com", "google.com", "tripadvisor.com", "yelp.com"].some(d => root.hostname === d || root.hostname.endsWith("." + d))) return [];
   const origin = root.origin;
   const pages = [root.href, new URL("/contact", origin).href, new URL("/contact-us", origin).href];
+  const disallowed = await blockedPaths(origin);
   const results = new Map<string, { email: string; source_url: string; confidence: string }>();
   for (const page of [...new Set(pages)].slice(0, 3)) {
     const url = await approvedHost(page);
+    if (disallowed.some(path => url.pathname.startsWith(path))) continue;
     const html = await readPage(url).catch(() => "");
     for (const match of html.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)) {
       const email = emailAddress(match[0]);

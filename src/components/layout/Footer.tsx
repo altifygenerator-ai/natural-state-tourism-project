@@ -29,6 +29,10 @@ const companyLinks = [
     href: "/about",
   },
   {
+    name: "Business Directory",
+    href: "/businesses",
+  },
+  {
     name: "Advertising",
     href: "/advertising",
   },

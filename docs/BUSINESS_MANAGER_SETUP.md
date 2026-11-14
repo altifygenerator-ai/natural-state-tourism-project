@@ -13,6 +13,7 @@ Set the following on the Vercel project that serves naturalstatetourismproject.o
 - NSTP_TOKEN_SECRET=(unique 32-byte random secret, retain it across deployments)
 - NSTP_ADMIN_KEY=(unique random password/key at least 24 characters)
 - RESEND_API_KEY=(existing verified-domain Resend credential)
+- RESEND_WEBHOOK_SECRET=(Resend signing secret, beginning whsec_)
 - NSTP_MAIL_FROM=(verified From identity, such as Natural State Tourism <businesses@your-verified-domain>)
 - NSTP_POSTAL_ADDRESS=(real physical mailing address or registered PO Box/PMB, required for promotional outreach)
 - CRON_SECRET=(Vercel's cron authorization secret)
@@ -41,7 +42,7 @@ Never expose admin, token, or database secret keys with NEXT_PUBLIC_.
 6. Confirm unsubscribe suppresses every matching contact and cancels queued sends.
 7. Check discovered email addresses manually before approving.
 8. Turn on research only when ready; leave outreach disabled until the sender, verification workflow, and suppression test pass.
-9. Add a signed Resend webhook before large-scale sends to handle bounces and complaints in real time.
+9. Register a signed Resend webhook at /api/directory/webhooks/resend for email.bounced, email.complained, and email.suppressed; confirm a test event is accepted and invalid signatures are rejected before sending.
 10. Integrate the public feed into the city-site renderers so approved owner changes appear on city guide cards; until then, the central directory has the updated record but older city pages continue to render their local hardcoded data.
 
 **Important:** This module does not yet auto-publish changes to the individual static city repositories. The central feed is supplied for that integration.
