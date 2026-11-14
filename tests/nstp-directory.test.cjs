@@ -61,3 +61,23 @@ test("server database operations use secret apikey without exposing it in URL", 
   try { assert.deepEqual(await directory.db("nstp_businesses", "GET"), [{ id: "ok" }]); }
   finally { global.fetch = original; }
 });
+
+test("business invitation uses free claim as primary action and paid offers stay optional", () => {
+  process.env.NSTP_POSTAL_ADDRESS = "123 Example Street, Sample Town, AR 00000";
+  const business = {
+    id: "17f9cd1e-2db5-4f12-8aa3-443cd5e40123",
+    name: 'Example & Sons <Test>',
+    city: "Glenwood",
+  };
+  const contact = { id: "27f9cd1e-2db5-4f12-8aa3-443cd5e40123" };
+  const html = directory.outreachHtml(business, contact);
+  assert.ok(html.includes("Claim your free business listing"));
+  assert.ok(html.includes("featured placements starting at $20/month"));
+  assert.ok(html.includes("business spotlight pages for $100 one time"));
+  assert.ok(html.includes("Whether you advertise with us or not"));
+  assert.ok(html.includes("/advertising"));
+  assert.ok(html.includes("/unsubscribe?c="));
+  assert.ok(html.includes("Example &amp; Sons &lt;Test&gt;"));
+  assert.ok(!html.includes("Example & Sons <Test>"));
+  delete process.env.NSTP_POSTAL_ADDRESS;
+});

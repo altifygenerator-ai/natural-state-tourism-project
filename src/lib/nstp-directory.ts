@@ -119,11 +119,24 @@ export function claimHtml(business: Business, url: string) {
   return emailShell('<p>We received a request to verify ownership of <strong>' + escapeHtml(business.name) + '</strong>.</p><p>If this was you, use the secure link below to confirm your email and access the listing editor. The link expires in 24 hours.</p><p><a href="' + escapeHtml(url) + '" style="display:inline-block;background:#183527;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none">Verify my business</a></p><p>If you did not request this, you can ignore this email.</p>');
 }
 export function outreachHtml(business: Business, contact: Contact) {
-  const claimUrl = ORIGIN + "/claim/" + business.id;
-  const unsubscribeUrl = ORIGIN + "/unsubscribe?c=" + contact.id + "&s=" + unsubscribeSignature(contact.id);
-  const address = escapeHtml(required("NSTP_POSTAL_ADDRESS"));
-  const body = '<p>Hi there,</p><p><strong>' + escapeHtml(business.name) + '</strong> is listed in our ' + escapeHtml(business.city) + ' Arkansas tourism directory. We are inviting local owners to verify their listing and keep it accurate for visitors.</p><p>Claiming and updating your basic listing is <strong>free</strong>.</p><p>You can review your details, suggest changes to hours, contact information, photos and your website.</p><p><a href="' + claimUrl + '" style="display:inline-block;background:#183527;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none">Claim your free listing</a></p><p>Thanks,<br>Natural State Tourism Project</p><p style="font-size:12px;color:#777">This is an introduction to our independent Arkansas tourism directory.</p>';
-  const footer = '<p style="margin:8px 0">' + address + '</p><a href="' + escapeHtml(unsubscribeUrl) + '">Unsubscribe from future outreach</a>';
+  const claimUrl = ORIGIN + "/claim/" + encodeURIComponent(business.id);
+  const advertisingUrl = ORIGIN + "/advertising";
+  const unsubscribeUrl = ORIGIN + "/unsubscribe?c=" + encodeURIComponent(contact.id) + "&s=" + encodeURIComponent(unsubscribeSignature(contact.id));
+  const postalAddress = escapeHtml(required("NSTP_POSTAL_ADDRESS"));
+  const name = escapeHtml(business.name);
+  const city = escapeHtml(business.city);
+  const body = [
+    '<p>Hi there,</p>',
+    '<p>We have <strong>' + name + '</strong> listed in our ' + city + ' visitor guide, part of the Natural State Tourism Project.</p>',
+    '<p>We\'re building a better way for people to discover local restaurants, shops, places to stay, and services around Arkansas. Just as important, we want local business owners to be able to keep their information correct.</p>',
+    '<p><strong>Claiming your basic business listing is free.</strong> You can verify ownership and submit updates to your hours, description, contact details, photos, or website for our team to review.</p>',
+    '<p><a href="' + escapeHtml(claimUrl) + '" style="display:inline-block;background:#d4a753;color:#183527;padding:13px 22px;border-radius:7px;font-weight:bold;text-decoration:none">Claim your free business listing</a></p>',
+    '<p>If you would like additional visibility, we also have optional <strong>featured placements starting at $20/month</strong> and <strong>business spotlight pages for $100 one time</strong>. Those are entirely separate from claiming your listing.</p>',
+    '<p><a href="' + escapeHtml(advertisingUrl) + '" style="color:#183527;text-decoration:underline">See featured listing options</a></p>',
+    '<p>Whether you advertise with us or not, your basic listing remains free.</p>',
+    '<p>Thanks,<br><strong>Natural State Tourism Project</strong><br>Independent Arkansas tourism guides</p>'
+  ].join("");
+  const footer = '<p style="margin:8px 0">' + postalAddress + '</p><a href="' + escapeHtml(unsubscribeUrl) + '">Unsubscribe from future business outreach</a>';
   return emailShell(body, footer);
 }
 function privateIPv4(ip: string) {
