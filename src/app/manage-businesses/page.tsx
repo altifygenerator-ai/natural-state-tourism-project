@@ -151,7 +151,7 @@ export default function ManageBusinesses() {
             </span>)}
         </div>
         {!data.settings?.testRecipientConfigured && <p className="mt-3 text-sm font-medium text-[#805b3d]">
-          The test-email button needs NSTP_TEST_EMAIL set to your own inbox in the main site's Vercel Production settings. Save and redeploy, then refresh this dashboard.
+          The test-email button needs NSTP_TEST_EMAIL set to your own inbox in the main site&apos;s Vercel Production settings. Save and redeploy, then refresh this dashboard.
         </p>}
         <p className="mt-3 text-sm text-[#647067]">
           Email delivery is guarded by production configuration. Research does not send mail. Sending uses a daily cap and permanent network-wide deduplication.
