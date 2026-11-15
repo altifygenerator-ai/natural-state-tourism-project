@@ -22,9 +22,15 @@ export default function ManageBusinesses() {
   const [search, setSearch] = useState("");
   const [reportMonth, setReportMonth] = useState(() => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1)).toISOString().slice(0, 7));
   async function load() {
-    const response = await fetch("/api/directory/admin", { headers: { "x-nstp-admin-key": secret }, cache: "no-store" });
+    const key = secret.trim();
+    if (key.length < 24) throw new Error("This admin key is too short. NSTP_ADMIN_KEY must contain at least 24 characters. Set a longer key in Vercel Production and redeploy.");
+    const response = await fetch("/api/directory/admin", { headers: { "x-nstp-admin-key": key }, cache: "no-store" });
     const json = await response.json();
+    if (response.status === 401) {
+      throw new Error("The key does not match this production deployment. Check NSTP_ADMIN_KEY in the main site's Vercel Production environment, then redeploy after saving changes.");
+    }
     if (!response.ok) throw new Error(json.error || "Unable to load dashboard");
+    setSecret(key);
     setData(json as Dataset); setLoggedIn(true);
   }
   async function action(kind: string, id?: string) {
@@ -79,6 +85,7 @@ export default function ManageBusinesses() {
     {!loggedIn ? <form onSubmit={async e => { e.preventDefault(); setBusy(true); try { await load(); } catch (err) { setNotice(err instanceof Error ? err.message : "Access denied"); } finally { setBusy(false); } }}
       className="mt-10 max-w-md space-y-4 rounded-xl border bg-white p-8">
       <label className="block text-sm font-semibold">Administrator access key</label>
+      <p className="text-xs leading-5 text-[#607063]">Enter the exact value of <code>NSTP_ADMIN_KEY</code> in the main site's Vercel <strong>Production</strong> environment (24+ characters). If you just changed it, redeploy the site first.</p>
       <input type="password" value={secret} onChange={e => setSecret(e.target.value)} autoComplete="off" required className="w-full rounded-md border p-3" />
       <button disabled={busy} className="rounded-full bg-[#183527] px-6 py-3 font-bold text-white">Open manager</button>
       {notice && <p role="alert" className="text-sm text-red-700">{notice}</p>}
