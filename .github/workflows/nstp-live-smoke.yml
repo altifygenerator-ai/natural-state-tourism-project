@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - ".github/workflows/nstp-live-smoke.yml"
+      - "src/app/api/directory/readiness/route.ts"
       - "src/lib/nstp-directory.ts"
       - "src/app/api/directory/admin/**"
       - "src/app/api/contact/route.ts"
@@ -15,6 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
+      - name: Verify production cron and controlled sender are configured
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --location --retry 2 --retry-delay 3 --max-time 25 "https://www.naturalstatetourismproject.org/api/directory/readiness" -o /tmp/nstp-readiness.json
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const s=JSON.parse(fs.readFileSync("/tmp/nstp-readiness.json","utf8"));
+            console.log("Cron credential configured:",s.schedulerConfigured);
+            console.log("Controlled mail test configured:",s.senderConfigured);
+            if(!s.schedulerConfigured||!s.senderConfigured)
+              throw Error("Production automation needs scheduler or email configuration before sending");
+          '
       - name: Verify live business feed returns approved-only directory information
         shell: bash
         run: |
