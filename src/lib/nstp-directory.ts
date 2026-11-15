@@ -1,6 +1,8 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
 import { lookup } from "node:dns/promises";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import type { NextRequest } from "next/server";
 
 export type Business = {
@@ -183,40 +185,83 @@ async function approvedHost(urlString: string): Promise<URL> {
   return url;
 }
 
+type SafeResponse = { status: number; location: string; contentType: string; body: string };
+async function pinnedTextRequest(url: URL, maxBytes: number, timeoutMs: number): Promise<SafeResponse> {
+  // Pin the validated DNS address to the actual socket. A second DNS resolution
+  // during fetch could otherwise redirect a public-looking host to a private IP.
+  const candidates = await lookup(url.hostname, { all: true });
+  if (!candidates.length || candidates.some(({ address, family }) =>
+      family === 4 ? privateIPv4(address) :
+      address === "::" || address === "::1" || address.startsWith("fc") ||
+      address.startsWith("fd") || address.startsWith("fe80") ||
+      address.startsWith("ff") || address.startsWith("::ffff:"))) throw new Error("Blocked unsafe website address");
+  const selected = candidates.find(x => x.family === 4) || candidates[0];
+  const requester = url.protocol === "https:" ? httpsRequest : httpRequest;
+  return await new Promise<SafeResponse>((resolve, reject) => {
+    const request = requester(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": "NaturalStateTourismDirectoryBot/1.0 (+https://www.naturalstatetourismproject.org)",
+        Accept: "text/html,text/plain;q=0.9,*/*;q=0.1",
+        "Accept-Encoding": "identity"
+      },
+      lookup: (_hostname, _options, callback) => callback(null, selected.address, selected.family)
+    }, response => {
+      const contentType = String(response.headers["content-type"] || "");
+      const location = String(response.headers.location || "");
+      const contentLength = Number(response.headers["content-length"] || 0);
+      if (contentLength > maxBytes) {
+        request.destroy(new Error("Response exceeds limit"));
+        return;
+      }
+      const chunks: Buffer[] = [];
+      let length = 0;
+      response.on("data", (chunk: Buffer) => {
+        length += chunk.length;
+        if (length > maxBytes) request.destroy(new Error("Response exceeds limit"));
+        else chunks.push(chunk);
+      });
+      response.on("end", () => resolve({
+        status: response.statusCode || 0, location, contentType,
+        body: Buffer.concat(chunks).toString("utf8")
+      }));
+      response.on("error", reject);
+    });
+    request.setTimeout(timeoutMs, () => request.destroy(new Error("Website timed out")));
+    request.on("error", reject);
+    request.end();
+  });
+}
 async function readPage(url: URL) {
   const baseDomain = url.hostname.replace(/^www\./, "");
   let current = url;
   for (let redirect = 0; redirect < 3; redirect++) {
-    const resp = await fetch(current, { signal: AbortSignal.timeout(6500), redirect: "manual",
-      headers: { "User-Agent": "NaturalStateTourismDirectoryBot/1.0 (+https://www.naturalstatetourismproject.org)" } });
-    if ([301, 302, 303, 307, 308].includes(resp.status)) {
-      const location = resp.headers.get("location");
-      if (!location) return "";
-      const next = await approvedHost(new URL(location, current).href);
+    const response = await pinnedTextRequest(current, 250000, 6000);
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      if (!response.location) return "";
+      const next = await approvedHost(new URL(response.location, current).href);
       if (next.hostname.replace(/^www\./, "") !== baseDomain) return "";
       current = next;
       continue;
     }
-    if (!resp.ok || !(resp.headers.get("content-type") || "").includes("text/html")) return "";
-    const length = Number(resp.headers.get("content-length") || 0);
-    if (length > 300000) return "";
-    return (await resp.text()).slice(0, 300000);
+    if (response.status < 200 || response.status >= 300 || !response.contentType.includes("text/html")) return "";
+    return response.body;
   }
   return "";
 }
 async function blockedPaths(origin: string): Promise<string[]> {
   try {
     const url = await approvedHost(new URL("/robots.txt", origin).href);
-    const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(3500) });
-    if (!response.ok) return [];
-    const text = (await response.text()).slice(0, 40000);
+    const response = await pinnedTextRequest(url, 40000, 3500);
+    if (response.status !== 200) return [];
     const excluded: string[] = [];
     let applies = false;
-    for (const raw of text.split(/\r?\n/)) {
+    for (const raw of response.body.split(/\r?\n/)) {
       const line = raw.split("#")[0].trim();
       const [key, ...rest] = line.split(":");
       const value = rest.join(":").trim();
-      if (key?.toLowerCase() === "user-agent") applies = value === "*" || /NaturalStateTourismDirectoryBot/i.test(value);
+      if (key?.toLowerCase() === "user-agent")
+        applies = value === "*" || /NaturalStateTourismDirectoryBot/i.test(value);
       if (applies && key?.toLowerCase() === "disallow" && value.startsWith("/")) excluded.push(value);
     }
     return excluded;
