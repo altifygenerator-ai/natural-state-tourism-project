@@ -213,3 +213,28 @@ test("admin session permits same-origin actions after initial key login, then ex
     else process.env.NSTP_ADMIN_KEY = previous;
   }
 });
+
+
+test("Node HTTPS pinned lookup uses single-address DNS result instead of all:true", async () => {
+  const https = require("node:https");
+  await new Promise((resolve, reject) => {
+    let observed = false;
+    const req = https.request("https://example.com", {
+      autoSelectFamily: false,
+      timeout: 1000,
+      lookup: (_host, options, callback) => {
+        observed = true;
+        assert.equal(options.all, undefined);
+        callback(new Error("Intentional offline test; no outbound connection"));
+      }
+    });
+    req.on("error", error => {
+      try {
+        assert.match(error.message, /Intentional offline test/);
+        assert.ok(observed);
+        resolve();
+      } catch (e) { reject(e); }
+    });
+    req.end();
+  });
+});

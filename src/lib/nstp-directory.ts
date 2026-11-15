@@ -264,6 +264,12 @@ async function pinnedTextRequest(url: URL, maxBytes: number, timeoutMs: number):
   return await new Promise<SafeResponse>((resolve, reject) => {
     const request = requester(url, {
       method: "GET",
+      // Node 20+ enables auto family selection by default. That switches
+      // the custom lookup callback to { all:true }, but our DNS-pinned
+      // callback deliberately returns one address. Disable family auto
+      // selection so the actual socket connects to the validated IP.
+      autoSelectFamily: false,
+      family: selected.family,
       headers: {
         "User-Agent": "NaturalStateTourismDirectoryBot/1.0 (+https://www.naturalstatetourismproject.org)",
         Accept: "text/html,text/plain;q=0.9,*/*;q=0.1",
