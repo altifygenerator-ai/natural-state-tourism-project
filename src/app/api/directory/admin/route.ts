@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       const expiry = new Date(Date.now() + 86400000).toISOString();
       await db("nstp_claim_requests", "PATCH", { id: "eq." + id, status: "eq.pending" },
         { status: "invited", token_hash: digest(secret), expires_at: expiry });
-      const link = "https://www.naturalstatetourismproject.org/api/directory/verify?id=" + id + "&token=" + encodeURIComponent(secret);
+      const link = "https://www.naturalstatetourismproject.org/verify-business?id=" + id + "&token=" + encodeURIComponent(secret);
       try { await sendMail(claim.email, "Verify your listing: " + businesses[0].name, claimHtml(businesses[0], link)); }
       catch {
         await db("nstp_claim_requests", "PATCH", { id: "eq." + id }, { status: "pending", token_hash: null });
