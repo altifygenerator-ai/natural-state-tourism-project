@@ -28,17 +28,17 @@ function loadModule(path, modules = {}) {
   const js=ts.transpileModule(source,{compilerOptions:{
     module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true
   }}).outputText;
-  const module={exports:{}};
+  const compiledModule={exports:{}};
   const mockedRequire=(name)=>{
     if(name==="next/server")return {NextResponse};
     if(Object.prototype.hasOwnProperty.call(modules,name))return modules[name];
     return require(name);
   };
-  new Function("require","module","exports",js)(mockedRequire,module,module.exports);
-  return module.exports;
+  new Function("require","module","exports",js)(mockedRequire,compiledModule,compiledModule.exports);
+  return compiledModule.exports;
 }
 const directory=loadModule("src/lib/nstp-directory.ts");
-const {digest,ownerCookie,ownerFromRequest}=directory;
+const {digest,ownerFromRequest}=directory;
 
 test("claimed known business email -> single-use verification -> authorized edit -> admin approval",async()=>{
   const audit=[];
