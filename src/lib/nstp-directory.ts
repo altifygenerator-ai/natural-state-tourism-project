@@ -268,7 +268,8 @@ async function pinnedTextRequest(url: URL, maxBytes: number, timeoutMs: number):
       // the custom lookup callback to { all:true }, but our DNS-pinned
       // callback deliberately returns one address. Disable family auto
       // selection so the actual socket connects to the validated IP.
-      autoSelectFamily: false,
+      // Node's http RequestOptions typing omits this supported socket option.
+      ...({ autoSelectFamily: false } as { autoSelectFamily: boolean }),
       family: selected.family,
       headers: {
         "User-Agent": "NaturalStateTourismDirectoryBot/1.0 (+https://www.naturalstatetourismproject.org)",
