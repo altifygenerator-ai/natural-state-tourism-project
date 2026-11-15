@@ -134,8 +134,6 @@ export default function ManageBusinesses() {
         <button disabled={busy || !data.settings?.testRecipientConfigured || !data.settings?.senderConfigured}
           onClick={() => action("test-mail")} title={!data.settings?.testRecipientConfigured ? "Set NSTP_TEST_EMAIL in Vercel Production, then redeploy" : !data.settings?.senderConfigured ? "Set RESEND_API_KEY in Vercel Production" : "Send a single sample only to your configured test inbox"}
           className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527] disabled:opacity-50">Send controlled test email</button>
-        <button disabled={busy} onClick={() => action("start-mail-test")}
-          className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">Run sender test</button>
         <button disabled={busy} onClick={() => action(data.settings?.automation?.outreach_requested ? "pause-automation" : "resume-automation")}
           className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">
           {data.settings?.automation?.outreach_requested ? "Pause automation" : "Resume automation"}

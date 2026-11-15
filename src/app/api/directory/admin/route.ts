@@ -1,6 +1,6 @@
 import { attemptFirstMailTest, getAutomationControl, mailStartupReadiness } from "@/lib/nstp-automation";
 import { NextRequest, NextResponse } from "next/server";
-import { Business, Change, Claim, Contact, Outreach, UUID, ADMIN_SESSION_COOKIE, ADMIN_SESSION_SECONDS, adminAllowed, adminKeyAllowed, adminSessionCookie, cleanChanges, db, digest, claimHtml, outreachHtml, mailFrom, sendMail, token } from "@/lib/nstp-directory";
+import { Business, Change, Claim, Contact, Outreach, UUID, ADMIN_SESSION_COOKIE, ADMIN_SESSION_SECONDS, adminAllowed, adminKeyAllowed, adminSessionCookie, cleanChanges, db, digest, claimHtml, mailFrom, sendMail, token } from "@/lib/nstp-directory";
 import { researchBusiness, sendClaimInvitations, suppressEmail } from "@/lib/nstp-workflows";
 export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
@@ -65,22 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(await attemptFirstMailTest());
     }
     if (body.action === "send") return NextResponse.json(await sendClaimInvitations(body.limit));
-    if (body.action === "test-mail") {
-      const email = process.env.NSTP_TEST_EMAIL;
-      if (!email) return NextResponse.json({ error: "NSTP_TEST_EMAIL must be configured with a controlled inbox." }, { status: 409 });
-      const businesses = await db<Business[]>("nstp_businesses", "GET",
-        { status: "eq.active", select: "*", order: "name.asc", limit: "1" });
-      if (!businesses.length) return NextResponse.json({ error: "No businesses available for sample." }, { status: 409 });
-      const sample = businesses[0];
-      const sampleContact = { id: "27f9cd1e-2db5-4f12-8aa3-443cd5e40123" } as Contact;
-      const previewHtml = outreachHtml(sample, sampleContact);
-      await sendMail(email, "[TEST] Your free listing in the " + sample.city + " Arkansas guide",
-        '<p style="font-family:Arial,sans-serif;padding:12px;background:#fff3d6;color:#6b4217">' +
-        '<strong>TEST EMAIL ONLY.</strong> The email below is a rendering preview. ' +
-        'Claim and unsubscribe example links should not be used.</p>' + previewHtml,
-        { idempotencyKey: "nstp-invitation-preview-" + new Date().toISOString().slice(0, 16).replaceAll(":", "-") });
-      return NextResponse.json({ message: "Test email submitted to the configured test inbox." });
-    }
+    if (body.action === "test-mail") return NextResponse.json(await attemptFirstMailTest());
     if (body.action === "research-batch") {
       const olderThan = new Date(Date.now() - 30 * 86400000).toISOString();
       const targets = await db<Business[]>("nstp_businesses", "GET",
