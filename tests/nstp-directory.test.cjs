@@ -168,3 +168,19 @@ test("email preview can render without a configured real postal address, but pro
     else process.env.NSTP_POSTAL_ADDRESS = old;
   }
 });
+
+test("business manager admin access requires matching Production key of 24+ characters", () => {
+  const original = process.env.NSTP_ADMIN_KEY;
+  const request = value => ({headers:{get:name=>name === "x-nstp-admin-key" ? value : null}});
+  try {
+    process.env.NSTP_ADMIN_KEY = "short-key";
+    assert.equal(directory.adminAllowed(request("short-key")),false);
+    process.env.NSTP_ADMIN_KEY = "long-and-private-admin-key-at-least-24-characters";
+    assert.equal(directory.adminAllowed(request("long-and-private-admin-key-at-least-24-characters")),true);
+    assert.equal(directory.adminAllowed(request("long-and-private-admin-key-at-least-24-characterS")),false);
+    assert.equal(directory.adminAllowed(request("")),false);
+  } finally {
+    if (original === undefined) delete process.env.NSTP_ADMIN_KEY;
+    else process.env.NSTP_ADMIN_KEY = original;
+  }
+});
