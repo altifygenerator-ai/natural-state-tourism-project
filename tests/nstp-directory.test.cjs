@@ -238,3 +238,21 @@ test("Node HTTPS pinned lookup uses single-address DNS result instead of all:tru
     req.end();
   });
 });
+
+test("rejects image asset names mistaken for email addresses", () => {
+  assert.equal(directory.isAssetFilenameEmail("app-promo-phones@2x.png"), true);
+  assert.equal(directory.isAssetFilenameEmail("filename@retina.webp"), true);
+  assert.equal(directory.isAssetFilenameEmail("info@swahacabins.com"), false);
+  assert.equal(directory.isAssetFilenameEmail("bayoubellas@yahoo.com"), false);
+});
+
+test("auto-approval of outside-domain inboxes requires a branded explicit mailto", () => {
+  assert.equal(directory.autoApprovedBrandedMailto("Bayou Bella's & Biscuits",
+    "bayoubellas@yahoo.com", "mailto"), true);
+  assert.equal(directory.autoApprovedBrandedMailto("Bayou Bella's & Biscuits",
+    "bayoubellas@yahoo.com", "visible_text"), false);
+  assert.equal(directory.autoApprovedBrandedMailto("Bayou Bella's & Biscuits",
+    "randomperson@gmail.com", "mailto"), false);
+  assert.equal(directory.autoApprovedBrandedMailto("Bayou Bella's & Biscuits",
+    "info@gmail.com", "mailto"), false);
+});
