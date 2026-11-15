@@ -1,6 +1,6 @@
 import { getAutomationControl, mailStartupReadiness } from "@/lib/nstp-automation";
 import { resolveMx } from "node:dns/promises";
-import { Business, Contact, Outreach, UUID, autoApprovedRoleContact, db, outreachHtml, researchEmails, rpc, sendMail, unsubscribeSignature, ORIGIN } from "@/lib/nstp-directory";
+import { Business, Contact, Outreach, UUID, autoApprovedRoleContact, autoApprovedBrandedMailto, db, outreachHtml, researchEmails, rpc, sendMail, unsubscribeSignature, ORIGIN } from "@/lib/nstp-directory";
 
 async function suppressed(email: string) {
   const rows = await db<{ email: string }[]>("nstp_suppression", "GET", { email: "eq." + email, select: "email", limit: "1" });
@@ -33,7 +33,8 @@ export async function researchBusiness(id: string) {
     if (seen.has(candidate.email) || await suppressed(candidate.email)) continue;
     let auto = false;
     if (process.env.NSTP_AUTO_APPROVE_ROLE_CONTACTS !== "false" &&
-        autoApprovedRoleContact(b.website, candidate.email, candidate.confidence)) {
+        (autoApprovedRoleContact(b.website, candidate.email, candidate.confidence) ||
+         autoApprovedBrandedMailto(b.name, candidate.email, candidate.source_kind))) {
       const domain = candidate.email.split("@")[1];
       if (!mxCache.has(domain)) {
         try { mxCache.set(domain, (await resolveMx(domain)).length > 0); }

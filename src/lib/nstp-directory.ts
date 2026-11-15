@@ -12,7 +12,7 @@ export type Business = {
   listing_url: string | null; hours: string | null; status: string;
   featured: boolean; placement_type: string; claimed_at: string | null;
 };
-export type Contact = { id: string; business_id: string; email: string; source_url: string | null; confidence: string; review_status: string; claim_eligible: boolean; };
+export type Contact = { id: string; business_id: string; email: string; source_url: string | null; confidence: string; source_kind?: "visible_text" | "mailto"; review_status: string; claim_eligible: boolean; };
 export type Claim = { id: string; business_id: string; email: string; status: string; token_hash: string | null; expires_at: string | null; created_at: string; };
 export type Change = { id: string; business_id: string; submitted_by: string; payload: Record<string, string>; status: string; submitted_at: string; };
 export type Outreach = { id: string; contact_id: string; campaign: string; status: string; attempts: number; sent_at: string | null; provider_id?: string | null; delivery_status?: string; };
@@ -76,6 +76,23 @@ export function autoApprovedRoleContact(website: string, email: string, confiden
   const businessRoles = new Set(["info","contact","hello","office","reservations","reservation","booking","bookings","sales","service","customerservice","frontdesk","reception","manager"]);
   return domain === websiteDomain && businessRoles.has(local);
 }
+export function isAssetFilenameEmail(value: string): boolean {
+  const email = emailAddress(value);
+  if (!email) return true;
+  const domain = email.split("@")[1];
+  return /\.(?:png|jpe?g|gif|webp|avif|svg|ico|css|js|json|woff2?|ttf|otf|mp4|mov|pdf)$/.test(domain) ||
+    /^([234]x|retina|image)$/i.test(domain.split(".")[0]);
+}
+
+export function autoApprovedBrandedMailto(businessName: string, email: string, sourceKind: string | undefined): boolean {
+  if (sourceKind !== "mailto" || !emailAddress(email) || isAssetFilenameEmail(email)) return false;
+  // A role/individual mailbox on a third-party mail service is not enough.
+  // Only official mailto links with a business-branded local part qualify.
+  const normalized = businessName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const local = email.split("@")[0].toLowerCase().split("+")[0].replace(/[^a-z0-9]/g, "");
+  return local.length >= 8 && normalized.startsWith(local);
+}
+
 export function digest(token: string) { return createHash("sha256").update(token).digest("hex"); }
 export function token() { return randomBytes(32).toString("base64url"); }
 function mac(scope: string, value: string) {
@@ -338,23 +355,31 @@ async function blockedPaths(origin: string): Promise<string[]> {
     return excluded;
   } catch { return []; }
 }
-export async function researchEmails(website: string): Promise<{ email: string; source_url: string; confidence: string }[]> {
+export async function researchEmails(website: string): Promise<{ email: string; source_url: string; confidence: string; source_kind: "visible_text" | "mailto" }[]> {
   const root = await approvedHost(website);
   if (["facebook.com", "instagram.com", "google.com", "tripadvisor.com", "yelp.com"].some(d => root.hostname === d || root.hostname.endsWith("." + d))) return [];
   const origin = root.origin;
   const pages = [root.href, new URL("/contact", origin).href, new URL("/contact-us", origin).href];
   const disallowed = await blockedPaths(origin);
-  const results = new Map<string, { email: string; source_url: string; confidence: string }>();
+  const results = new Map<string, { email: string; source_url: string; confidence: string; source_kind: "visible_text" | "mailto" }>();
   for (const page of [...new Set(pages)].slice(0, 3)) {
     const url = await approvedHost(page);
     if (disallowed.some(path => url.pathname.startsWith(path))) continue;
     const html = await readPage(url).catch(() => "");
+    const officialMailtos = new Set(
+      [...html.matchAll(/\bhref\s*=\s*["']?\s*mailto:([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/gi)]
+        .map(match => emailAddress(match[1])).filter((value): value is string => Boolean(value))
+    );
     for (const match of html.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)) {
       const email = emailAddress(match[0]);
-      if (!email || /example\.|sentry\.|wixpress\.|cloudflare\.|wordpress\.|gravatar\.|schema\.org/.test(email)) continue;
+      if (!email || isAssetFilenameEmail(email) ||
+        /example\.|sentry\.|wixpress\.|cloudflare\.|wordpress\.|gravatar\.|schema\.org/.test(email)) continue;
       const host = email.split("@")[1];
       const isOwnDomain = host === root.hostname.replace(/^www\./, "") || root.hostname.endsWith("." + host);
-      if (!results.has(email)) results.set(email, { email, source_url: page, confidence: isOwnDomain ? "high" : "medium" });
+      const source_kind = officialMailtos.has(email) ? "mailto" : "visible_text";
+      const previous = results.get(email);
+      if (!previous || (source_kind === "mailto" && previous.source_kind !== "mailto"))
+        results.set(email, { email, source_url: page, confidence: isOwnDomain ? "high" : "medium", source_kind });
     }
   }
   return [...results.values()].slice(0, 8);
