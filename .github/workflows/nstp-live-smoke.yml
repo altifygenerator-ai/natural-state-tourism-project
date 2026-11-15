@@ -1,0 +1,43 @@
+name: Natural State production business manager smoke test
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: [".github/workflows/nstp-live-smoke.yml"]
+permissions:
+  contents: read
+jobs:
+  public-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Verify live business feed returns approved-only directory information
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --location --retry 3 --retry-delay 3 --max-time 25 "https://www.naturalstatetourismproject.org/api/directory/public?city=Glenwood" -o /tmp/nstp.json
+          node --input-type=module -e 'import fs from "node:fs"; const j=JSON.parse(fs.readFileSync("/tmp/nstp.json","utf8")); if(!Array.isArray(j.businesses)||!j.businesses.length)throw Error("No deployed business feed"); if(!j.businesses.every(x=>x.source_site&&x.source_key&&x.approved_overrides))throw Error("Synchronization fields missing"); if(j.businesses.some(x=>"owner_email" in x || "token_hash" in x || "contact_email" in x))throw Error("Private field exposed"); console.log(j.businesses.length + " Glenwood records returned without private fields");'
+      - name: Verify public business directory is configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --location --retry 2 --retry-delay 3 --max-time 25 "https://www.naturalstatetourismproject.org/businesses?city=Glenwood" -o /tmp/nstp.html
+          if grep -q "The business directory is being prepared" /tmp/nstp.html; then echo "Production DB configuration missing"; exit 1; fi
+          echo "Directory HTML returned"
+      - name: Verify five public city-directory pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in https://www.glenwoodarkansas.org/local-business https://www.hotspringsarkansas.org/local-businesses https://www.mountidaarkansas.org/local-business https://www.murfreesboroarkansas.org/murfreesboro-local-businesses https://www.amityarkansas.org/local-business; do
+            echo "Checking $url"
+            curl --fail-with-body --silent --show-error --location --retry 2 --retry-delay 3 --max-time 25 "$url" -o /dev/null
+          done
+      - name: Verify anonymous admin and cron requests are rejected
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in /api/directory/admin /api/cron/nstp-directory; do
+            status=$(curl --silent --show-error --location --max-time 15 -o /dev/null -w "%{http_code}" "https://www.naturalstatetourismproject.org$path")
+            if [ "$status" != "401" ]; then echo "Unexpected $status at $path"; exit 1; fi
+          done
+          echo "Protected routes return 401"
