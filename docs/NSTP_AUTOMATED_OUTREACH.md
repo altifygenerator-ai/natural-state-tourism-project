@@ -47,3 +47,32 @@ An unknown provider outcome is marked failed/uncertain, without automatic retry.
 ## Known separate task
 Static business-listing data in the five city sites is not yet switched to the new shared public feed; owner edits are visible in the central directory but do not automatically rewrite old static city pages.
 Deployment was not performed while the connected Vercel account returned no project access.
+## Monthly real business and city traffic reporting
+
+The shared directory now records privacy-conscious, deduplicated business profile views, website clicks, phone-link clicks, and city-guide pageviews after the tracking code goes live. City-site outbound clicks count only when the external destination exactly and uniquely matches a recorded business website. Raw IPs and user-agent strings are not stored in reports.
+
+The owner dashboard displays the last 30 days and completed months. Reports separate clicks to a business from overall city-guide pageviews, which are NOT necessarily exposures for the individual business. Historical Vercel pageviews are not imported as direct referrals. Counters do not establish unique visitors, leads, reservations or sales.
+
+Monthly database snapshots are created by the existing daily cron on the first three days of each UTC month. Verified business owners may opt into emailed reports. Only months with recorded interactions are queued. No monthly owner emails send unless NSTP_MONTHLY_REPORTS_ENABLED=true and the verified Resend sender works. Email batches are limited to five daily.
+
+Admins may download CSV files for monthly business referrals and site pageviews in /manage-businesses. The public advertising page only displays completed-month measured reach when actual recorded data exists.
+
+## How to start automatic business invitations
+
+1. Confirm the correct existing Vercel project owning www.naturalstatetourismproject.org is visible through the connected Vercel account. Do not create a replacement project.
+2. In Vercel Production configure NSTP_SUPABASE_URL, NSTP_SUPABASE_SECRET_KEY, NSTP_TOKEN_SECRET, NSTP_ADMIN_KEY, CRON_SECRET, RESEND_API_KEY, RESEND_WEBHOOK_SECRET, NSTP_MAIL_FROM, NSTP_POSTAL_ADDRESS, and NSTP_TEST_EMAIL. Set NSTP_RESEARCH_ENABLED=false, NSTP_OUTREACH_ENABLED=false and NSTP_MONTHLY_REPORTS_ENABLED=false initially. Never paste keys into chat or public source files.
+3. Verify Resend domain SPF/DKIM/DMARC and signed webhooks to /api/directory/webhooks/resend.
+4. From /manage-businesses send a controlled test to NSTP_TEST_EMAIL. Verify real arrival and the signed delivered webhook event.
+5. Use Research next 5 businesses, inspect source evidence, and confirm correct city, contact, unsubscribe and claim verification behavior.
+6. Activate NSTP_RESEARCH_ENABLED=true after testing; this checks up to five due official business websites each day. The research step never sends promotional email.
+7. After testing the production sender, claim flow, bounce suppression and opt-outs, activate NSTP_OUTREACH_ENABLED=true and redeploy. The 14:00 UTC daily cron attempts up to five queued claim invitations, with a 15-per-UTC-day global database limit that includes manual batches.
+8. Set NSTP_MONTHLY_REPORTS_ENABLED=true separately to deliver monthly measured reports only to verified owners who opted in; it never turns promotional outreach on.
+9. Set NSTP_OUTREACH_ENABLED=false to suspend all promotional invitations. Monitor bounces, complaints and unsubscribes.
+
+## Paid visibility vs free claiming
+
+The business claim and updating basic information are free, regardless of advertising. The owner portal and claim invitation offer discreet links to the existing $20/month Featured Placement and $100 one-time Spotlight Page. Owners are never required to buy placement to update their listing.
+
+## Known limitation
+
+Some city guide pages still render older hardcoded business data. Approved central directory edits are not automatically reflected in those city pages until their data adapters are connected. City tracking measures only activity after its deployment and cannot backfill historic Vercel data.
