@@ -21,23 +21,29 @@ export default function ManageBusinesses() {
   const [city, setCity] = useState("All");
   const [search, setSearch] = useState("");
   const [reportMonth, setReportMonth] = useState(() => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1)).toISOString().slice(0, 7));
-  async function load() {
+  async function load(signingIn = false) {
     const key = secret.trim();
-    if (key.length < 24) throw new Error("This admin key is too short. NSTP_ADMIN_KEY must contain at least 24 characters. Set a longer key in Vercel Production and redeploy.");
-    const response = await fetch("/api/directory/admin", { headers: { "x-nstp-admin-key": key }, cache: "no-store" });
+    if (signingIn && key.length < 24) throw new Error("This key is too short. NSTP_ADMIN_KEY must contain at least 24 characters.");
+    const response = await fetch("/api/directory/admin", {
+      headers: signingIn ? { "x-nstp-admin-key": key } : {},
+      cache: "no-store", credentials: "same-origin"
+    });
     const json = await response.json();
     if (response.status === 401) {
-      throw new Error("The key does not match this production deployment. Check NSTP_ADMIN_KEY in the main site's Vercel Production environment, then redeploy after saving changes.");
+      if (!signingIn) setLoggedIn(false);
+      throw new Error(signingIn
+        ? "The key does not match Vercel Production. Check NSTP_ADMIN_KEY and redeploy after saving."
+        : "Your admin session expired or was reset. Please sign in again.");
     }
     if (!response.ok) throw new Error(json.error || "Unable to load dashboard");
-    setSecret(key);
+    if (signingIn) setSecret("");
     setData(json as Dataset); setLoggedIn(true);
   }
   async function action(kind: string, id?: string) {
     setBusy(true); setNotice("");
     try {
       const response = await fetch("/api/directory/admin", { method: "POST",
-        headers: { "Content-Type": "application/json", "x-nstp-admin-key": secret }, body: JSON.stringify({ action: kind, id, limit: 5 }) });
+        headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ action: kind, id, limit: 5 }) });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || "Action failed");
       setNotice(json.message || JSON.stringify(json));
@@ -49,7 +55,7 @@ export default function ManageBusinesses() {
     setBusy(true); setNotice("");
     try {
       const response = await fetch("/api/directory/admin/preview", {
-        method: "POST", headers: { "x-nstp-admin-key": secret }, cache: "no-store"
+        method: "POST", credentials: "same-origin", cache: "no-store"
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to preview mail");
@@ -57,11 +63,22 @@ export default function ManageBusinesses() {
     } catch (error) { setNotice(error instanceof Error ? error.message : "Preview failed"); }
     finally { setBusy(false); }
   }
+  async function signOut() {
+    setBusy(true); setNotice("");
+    try {
+      await fetch("/api/directory/admin", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        credentials: "same-origin", body: JSON.stringify({ action: "logout" })
+      });
+    } finally {
+      setLoggedIn(false); setData(empty); setEmailPreview(null); setSecret(""); setBusy(false);
+    }
+  }
   async function exportReport(kind: "site" | "business") {
     setBusy(true); setNotice("");
     try {
       const response = await fetch("/api/directory/admin/report?month=" + reportMonth + "&kind=" + kind,
-        { headers: { "x-nstp-admin-key": secret }, cache: "no-store" });
+        { credentials: "same-origin", cache: "no-store" });
       if (!response.ok) throw new Error("Unable to export data for " + reportMonth);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -82,7 +99,7 @@ export default function ManageBusinesses() {
   return <main className="min-h-screen bg-[#faf8f2] pb-24 pt-36"><div className="mx-auto max-w-6xl px-5">
     <p className="mb-3 text-xs font-bold uppercase tracking-[.25em] text-[#9c7430]">Private business operations</p>
     <h1 className="font-heading text-5xl font-bold text-[#183527]">Business Manager</h1>
-    {!loggedIn ? <form onSubmit={async e => { e.preventDefault(); setBusy(true); try { await load(); } catch (err) { setNotice(err instanceof Error ? err.message : "Access denied"); } finally { setBusy(false); } }}
+    {!loggedIn ? <form onSubmit={async e => { e.preventDefault(); setBusy(true); try { await load(true); } catch (err) { setNotice(err instanceof Error ? err.message : "Access denied"); } finally { setBusy(false); } }}
       className="mt-10 max-w-md space-y-4 rounded-xl border bg-white p-8">
       <label className="block text-sm font-semibold">Administrator access key</label>
       <p className="text-xs leading-5 text-[#607063]">Enter the exact value of <code>NSTP_ADMIN_KEY</code> in the main site&apos;s Vercel <strong>Production</strong> environment (24+ characters). If you just changed it, redeploy the site first.</p>
@@ -102,6 +119,8 @@ export default function ManageBusinesses() {
         ].map(([label, value]) => <div key={label} className="rounded-xl border bg-white p-5"><p className="text-sm text-[#617060]">{label}</p><p className="mt-2 font-heading text-4xl font-bold text-[#183527]">{value}</p></div>)}
       </div>
       <div className="my-6 flex flex-wrap gap-3">
+        <button disabled={busy} onClick={signOut}
+          className="rounded-full border border-[#afbaa7] px-5 py-2 text-sm font-semibold text-[#526754]">Sign out</button>
         <button disabled={busy} onClick={() => load().catch(e => setNotice(String(e)))} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">Refresh dashboard</button>
         <button disabled={busy} onClick={() => action("research-batch")} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">Research next 5 businesses</button>
         <button disabled={busy} onClick={previewEmails}
@@ -109,7 +128,8 @@ export default function ManageBusinesses() {
           Preview branded emails
         </button>
         <button disabled={busy || !data.settings?.testRecipientConfigured || !data.settings?.senderConfigured}
-          onClick={() => action("test-mail")} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527] disabled:opacity-50">Send controlled test email</button>
+          onClick={() => action("test-mail")} title={!data.settings?.testRecipientConfigured ? "Set NSTP_TEST_EMAIL in Vercel Production, then redeploy" : !data.settings?.senderConfigured ? "Set RESEND_API_KEY in Vercel Production" : "Send a single sample only to your configured test inbox"}
+          className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527] disabled:opacity-50">Send controlled test email</button>
         <button disabled={busy || !data.settings?.outreachEnabled}
           onClick={() => action("send")} className="rounded-full bg-[#183527] px-5 py-2 text-sm font-bold text-white disabled:opacity-40">Send up to 5 approved invitations</button>
       </div>
@@ -120,6 +140,7 @@ export default function ManageBusinesses() {
             ["Research", data.settings?.researchEnabled],
             ["Auto-approve eligible role inboxes", data.settings?.roleContactAutoApprove],
             ["Mail sender", data.settings?.senderConfigured],
+            ["Controlled test inbox", data.settings?.testRecipientConfigured],
             ["Postal address", data.settings?.postalConfigured],
             ["Delivery webhook", data.settings?.webhookConfigured],
             ["Automated outreach", data.settings?.outreachEnabled],
@@ -129,6 +150,9 @@ export default function ManageBusinesses() {
               {label}: {ready ? "Ready / enabled" : "Off / missing"}
             </span>)}
         </div>
+        {!data.settings?.testRecipientConfigured && <p className="mt-3 text-sm font-medium text-[#805b3d]">
+          The test-email button needs NSTP_TEST_EMAIL set to your own inbox in the main site&apos;s Vercel Production settings. Save and redeploy, then refresh this dashboard.
+        </p>}
         <p className="mt-3 text-sm text-[#647067]">
           Email delivery is guarded by production configuration. Research does not send mail. Sending uses a daily cap and permanent network-wide deduplication.
         </p>

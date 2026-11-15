@@ -184,3 +184,32 @@ test("business manager admin access requires matching Production key of 24+ char
     else process.env.NSTP_ADMIN_KEY = original;
   }
 });
+
+test("admin session permits same-origin actions after initial key login, then expires securely", () => {
+  const previous = process.env.NSTP_ADMIN_KEY;
+  process.env.NSTP_ADMIN_KEY = "long-and-private-admin-key-at-least-24-characters";
+  const headers = (key, origin) => ({ get(name) {
+    if (name === "x-nstp-admin-key") return key || null;
+    if (name === "origin") return origin || null;
+    return null;
+  }});
+  const req = (key, cookie, method = "GET", origin = null) => ({
+    headers: headers(key, origin), method, nextUrl: { origin: "https://www.naturalstatetourismproject.org" },
+    cookies: { get(name) { return name === directory.ADMIN_SESSION_COOKIE && cookie
+      ? { value: cookie } : undefined; } }
+  });
+  try {
+    assert.equal(directory.adminKeyAllowed(req("long-and-private-admin-key-at-least-24-characters")), true);
+    const session = directory.adminSessionCookie();
+    assert.equal(directory.adminAllowed(req(null, session)), true);
+    assert.equal(directory.adminAllowed(req(null, session, "POST", "https://www.naturalstatetourismproject.org")), true);
+    assert.equal(directory.adminAllowed(req(null, session, "POST", "https://evil.example")), false);
+    assert.equal(directory.adminAllowed(req(null, session, "POST", null)), false);
+    assert.equal(directory.adminAllowed(req(null, session + "tampered")), false);
+    process.env.NSTP_ADMIN_KEY = "another-different-admin-key-at-least-24-characters";
+    assert.equal(directory.adminAllowed(req(null, session)), false);
+  } finally {
+    if (previous === undefined) delete process.env.NSTP_ADMIN_KEY;
+    else process.env.NSTP_ADMIN_KEY = previous;
+  }
+});
