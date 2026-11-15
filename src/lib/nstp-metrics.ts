@@ -20,11 +20,15 @@ export function allowedSite(value: string | null) {
     return Object.prototype.hasOwnProperty.call(siteCities, host) ? host : null;
   } catch { return null; }
 }
-export function corsHeaders(origin: string | null) {
-  const site = allowedSite(origin);
-  return site ? { "Access-Control-Allow-Origin": origin!, "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type", "Vary": "Origin",
-    "Cache-Control": "no-store" } : { "Cache-Control": "no-store" };
+export function corsHeaders(origin: string | null): Headers {
+  const headers = new Headers({ "Cache-Control": "no-store" });
+  if (allowedSite(origin) && origin) {
+    headers.set("Access-Control-Allow-Origin", origin);
+    headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    headers.set("Access-Control-Allow-Headers", "Content-Type");
+    headers.set("Vary", "Origin");
+  }
+  return headers;
 }
 export function isLikelyAutomated(req: NextRequest) {
   const agent = req.headers.get("user-agent") || "";
