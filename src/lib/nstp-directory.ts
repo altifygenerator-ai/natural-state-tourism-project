@@ -90,11 +90,54 @@ export function requestFingerprint(req: NextRequest): string | null {
   if (!remote || remote.length > 80) return null;
   return createHmac("sha256", required("NSTP_TOKEN_SECRET")).update("claim-source:" + remote).digest("hex");
 }
-export function adminAllowed(req: NextRequest) {
-  const expected = process.env.NSTP_ADMIN_KEY;
-  const supplied = req.headers.get("x-nstp-admin-key") || "";
-  return Boolean(expected && supplied && expected.length >= 24 && safeEqual(expected, supplied));
+const ADMIN_SESSION = "nstp_admin";
+const ADMIN_SESSION_HOURS = 8;
+function adminSecret() {
+  const secret = process.env.NSTP_ADMIN_KEY;
+  return secret && secret.length >= 24 ? secret : null;
 }
+export function adminKeyAllowed(req: NextRequest) {
+  const secret = adminSecret();
+  const supplied = req.headers.get("x-nstp-admin-key") || "";
+  return Boolean(secret && supplied && safeEqual(secret, supplied));
+}
+export function adminSessionCookie() {
+  const secret = adminSecret();
+  if (!secret) throw new Error("An admin key of at least 24 characters is required");
+  const data = Buffer.from(JSON.stringify({
+    exp: Date.now() + ADMIN_SESSION_HOURS * 3600000,
+    nonce: randomBytes(12).toString("hex")
+  })).toString("base64url");
+  const signature = createHmac("sha256", secret).update("admin-session:" + data).digest("base64url");
+  return data + "." + signature;
+}
+export function adminSessionValid(raw: string | undefined) {
+  const secret = adminSecret();
+  if (!secret || !raw || raw.length > 512) return false;
+  const parts = raw.split(".");
+  if (parts.length !== 2 || !parts.every(x => /^[A-Za-z0-9_-]+$/.test(x))) return false;
+  const signature = createHmac("sha256", secret).update("admin-session:" + parts[0]).digest("base64url");
+  if (!safeEqual(signature, parts[1])) return false;
+  try {
+    const parsed = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+    return Number.isFinite(parsed.exp) && parsed.exp > Date.now() &&
+      parsed.exp <= Date.now() + ADMIN_SESSION_HOURS * 3600000 + 60000;
+  } catch { return false; }
+}
+export function adminAllowed(req: NextRequest) {
+  if (adminKeyAllowed(req)) return true;
+  const value = req.cookies?.get(ADMIN_SESSION)?.value;
+  if (!adminSessionValid(value)) return false;
+  // Browsers automatically attach cookies. Require the same origin for mutations.
+  const method = req.method || "GET";
+  if (method !== "GET" && method !== "HEAD") {
+    const origin = req.headers.get("origin");
+    if (!origin || !req.nextUrl || origin !== req.nextUrl.origin) return false;
+  }
+  return true;
+}
+export const ADMIN_SESSION_COOKIE = ADMIN_SESSION;
+export const ADMIN_SESSION_SECONDS = ADMIN_SESSION_HOURS * 3600;
 export function ownerCookie(businessId: string, email: string) {
   const data = Buffer.from(JSON.stringify({ b: businessId, e: email, exp: Date.now() + 7 * 86400000 })).toString("base64url");
   return data + "." + mac("owner", data);

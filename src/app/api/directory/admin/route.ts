@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Business, Change, Claim, Contact, Outreach, UUID, adminAllowed, cleanChanges, db, digest, claimHtml, outreachHtml, mailFrom, sendMail, token } from "@/lib/nstp-directory";
+import { Business, Change, Claim, Contact, Outreach, UUID, ADMIN_SESSION_COOKIE, ADMIN_SESSION_SECONDS, adminAllowed, adminKeyAllowed, adminSessionCookie, cleanChanges, db, digest, claimHtml, outreachHtml, mailFrom, sendMail, token } from "@/lib/nstp-directory";
 import { researchBusiness, sendClaimInvitations, suppressEmail } from "@/lib/nstp-workflows";
 export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
@@ -28,13 +28,28 @@ export async function GET(req: NextRequest) {
       monthlyReportsEnabled: process.env.NSTP_MONTHLY_REPORTS_ENABLED === "true",
       roleContactAutoApprove: process.env.NSTP_AUTO_APPROVE_ROLE_CONTACTS !== "false"
     };
-    return NextResponse.json({ businesses, contacts, claims, changes, outreach, siteMonthly, monthlyDeliveries, settings }, { headers: { "Cache-Control": "private, no-store" } });
+    const response = NextResponse.json({ businesses, contacts, claims, changes, outreach, siteMonthly, monthlyDeliveries, settings },
+      { headers: { "Cache-Control": "private, no-store" } });
+    // The admin key is used once to create a short-lived HttpOnly session.
+    if (adminKeyAllowed(req)) response.cookies.set(ADMIN_SESSION_COOKIE, adminSessionCookie(), {
+      httpOnly: true, secure: process.env.NODE_ENV === "production",
+      sameSite: "strict", maxAge: ADMIN_SESSION_SECONDS, path: "/"
+    });
+    return response;
   } catch { return NextResponse.json({ error: "Directory database is not configured or unavailable." }, { status: 503 }); }
 }
 export async function POST(req: NextRequest) {
   if (!adminAllowed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await req.json() as { action?: string; id?: string; limit?: number };
+    if (body.action === "logout") {
+      const response = NextResponse.json({ message: "Signed out" });
+      response.cookies.set(ADMIN_SESSION_COOKIE, "", {
+        httpOnly: true, secure: process.env.NODE_ENV === "production",
+        sameSite: "strict", path: "/", maxAge: 0
+      });
+      return response;
+    }
     if (body.action === "send") return NextResponse.json(await sendClaimInvitations(body.limit));
     if (body.action === "test-mail") {
       const email = process.env.NSTP_TEST_EMAIL;
