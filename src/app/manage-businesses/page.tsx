@@ -11,7 +11,7 @@ type Settings = { automation?: { research_enabled: boolean; outreach_requested: 
   mail_test_status: string; mail_test_error: string | null;
   mail_test_delivered_at: string | null; mail_test_started_at: string | null;
   last_cron_at: string | null; last_cron_result: Record<string, unknown> | null; };
-  testReadiness?: string | null; senderIdentity?: string; dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; monthlyReportsEnabled: boolean; };
+  testReadiness?: string | null; cronConfigured?: boolean; senderIdentity?: string; dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; monthlyReportsEnabled: boolean; };
 type Dataset = { businesses: Business[]; contacts: Contact[]; claims: Claim[]; changes: Change[]; outreach: Outreach[]; siteMonthly?: SiteMonth[]; monthlyDeliveries?: MonthlyDelivery[]; settings?: Settings; };
 const empty: Dataset = { businesses: [], contacts: [], claims: [], changes: [], outreach: [] };
 export default function ManageBusinesses() {
@@ -149,6 +149,7 @@ export default function ManageBusinesses() {
             ["Auto-approve eligible role inboxes", data.settings?.roleContactAutoApprove],
             ["Mail sender", data.settings?.senderConfigured],
             ["Controlled test inbox", data.settings?.testRecipientConfigured],
+            ["Daily scheduler secret", data.settings?.cronConfigured],
             ["Postal address", data.settings?.postalConfigured],
             ["Delivery webhook", data.settings?.webhookConfigured],
             ["Automated outreach", data.settings?.outreachEnabled],
@@ -166,6 +167,9 @@ export default function ManageBusinesses() {
             {data.settings?.automation?.mail_test_delivered_at ? " (confirmed via signed Resend webhook)" : ""}
           </p>
           {data.settings?.testReadiness && <p className="mt-1 text-[#8b5839]">Configuration: {data.settings.testReadiness}</p>}
+          {!data.settings?.cronConfigured && <p className="mt-1 text-[#8b5839]">
+            The daily Vercel job needs CRON_SECRET in Production to run automatically.
+          </p>}
           {data.settings?.automation?.mail_test_error && <p className="mt-1 text-[#8b5839]">
             Test error: {data.settings.automation.mail_test_error}
           </p>}

@@ -99,3 +99,39 @@ test("business invitations remain blocked until confirmed sender test and activa
   });
   await assert.rejects(workflows.sendClaimInvitations(5),/confirmed test email delivery/);
 });
+
+test("signed Resend delivery event unlocks one controlled test, but forged events cannot",async()=>{
+  await withConfig(async()=>{
+    const crypto=require("node:crypto");
+    const key=Buffer.from("valid-webhook-secret-of-at-least-20-bytes");
+    process.env.RESEND_WEBHOOK_SECRET="whsec_"+key.toString("base64");
+    const state={mail_test_status:"accepted"};
+    const data={type:"email.delivered",data:{email_id:"em_proof_test",to:["naturalstatetourismproject@gmail.com"]}};
+    const raw=JSON.stringify(data);
+    const timestamp=String(Math.floor(Date.now()/1000));
+    const id="test-proven-delivery";
+    const signature="v1,"+crypto.createHmac("sha256",key).update(id+"."+timestamp+"."+raw).digest("base64");
+    const headers=new Map([["svix-id",id],["svix-timestamp",timestamp],["svix-signature","fake"]]);
+    const response={json:(body,init={})=>({status:init.status||200,body})};
+    const db=async(table,method,params,body)=>{
+      if(table==="nstp_outreach")return [];
+      if(table==="nstp_automation_control") {
+        if(method==="GET")return [{id:1,mail_test_status:state.mail_test_status}];
+        if(method==="PATCH") {Object.assign(state,body);return [{...state}];}
+      }
+      throw Error("Unexpected DB access: "+table);
+    };
+    const webhook=moduleFor("src/app/api/directory/webhooks/resend/route.ts",{
+      "next/server":{NextResponse:response},
+      "@/lib/nstp-directory":{db,emailAddress:x=>x},
+      "@/lib/nstp-workflows":{suppressEmail:async()=>{throw Error("delivery must not suppress")}}
+    });
+    const req={headers:{get:k=>headers.get(k)},text:async()=>raw};
+    assert.equal((await webhook.POST(req)).status,401);
+    assert.equal(state.mail_test_status,"accepted");
+    headers.set("svix-signature",signature);
+    assert.equal((await webhook.POST(req)).status,200);
+    assert.equal(state.mail_test_status,"delivered");
+    assert.ok(state.mail_test_delivered_at);
+  });
+});
