@@ -88,7 +88,7 @@ export default function OwnerPage() {
         </div>}
         {data.siteHistory?.some(x => x.tracked_pageviews > 0) &&
           <div className="mt-5 rounded-lg bg-[#f5f6ef] p-4 text-sm text-[#596a5b]">
-            <p className="font-semibold text-[#183527]">Your city's guide reach</p>
+            <p className="font-semibold text-[#183527]">Your city&apos;s guide reach</p>
             {data.siteHistory.filter(x => x.tracked_pageviews > 0).slice(0, 2).map(x =>
               <p className="mt-1" key={x.month}>{labelMonth(x.month)}:{" "}
                 {x.tracked_pageviews.toLocaleString()} tracked pageviews across the {data.business.city} guide.</p>)}
