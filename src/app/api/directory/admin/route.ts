@@ -5,12 +5,16 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   if (!adminAllowed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const [businesses, contacts, claims, changes, outreach] = await Promise.all([
+    const [businesses, contacts, claims, changes, outreach, siteMonthly, monthlyDeliveries] = await Promise.all([
       db<Business[]>("nstp_businesses", "GET", { select: "*", order: "city.asc,name.asc", limit: "750" }),
       db<Contact[]>("nstp_business_contacts", "GET", { select: "*", order: "researched_at.desc", limit: "500" }),
       db<Claim[]>("nstp_claim_requests", "GET", { select: "id,business_id,email,status,created_at", order: "created_at.desc", limit: "200" }),
       db<Change[]>("nstp_business_changes", "GET", { select: "*", order: "submitted_at.desc", limit: "200" }),
-      db<Outreach[]>("nstp_outreach", "GET", { select: "*", order: "created_at.desc", limit: "500" })
+      db<Outreach[]>("nstp_outreach", "GET", { select: "*", order: "created_at.desc", limit: "500" }),
+      db<{ site: string; month: string; tracked_pageviews: number }[]>("nstp_monthly_site_stats", "GET",
+        { select: "site,month,tracked_pageviews", order: "month.desc", limit: "72" }),
+      db<{ id: string; month: string; status: string }[]>("nstp_monthly_report_deliveries", "GET",
+        { select: "id,month,status", order: "created_at.desc", limit: "500" })
     ]);
     const settings = {
       dbConfigured: Boolean(process.env.NSTP_SUPABASE_SECRET_KEY && process.env.NSTP_SUPABASE_URL),
@@ -20,9 +24,10 @@ export async function GET(req: NextRequest) {
       testRecipientConfigured: Boolean(process.env.NSTP_TEST_EMAIL),
       researchEnabled: process.env.NSTP_RESEARCH_ENABLED === "true",
       outreachEnabled: process.env.NSTP_OUTREACH_ENABLED === "true",
+      monthlyReportsEnabled: process.env.NSTP_MONTHLY_REPORTS_ENABLED === "true",
       roleContactAutoApprove: process.env.NSTP_AUTO_APPROVE_ROLE_CONTACTS !== "false"
     };
-    return NextResponse.json({ businesses, contacts, claims, changes, outreach, settings }, { headers: { "Cache-Control": "private, no-store" } });
+    return NextResponse.json({ businesses, contacts, claims, changes, outreach, siteMonthly, monthlyDeliveries, settings }, { headers: { "Cache-Control": "private, no-store" } });
   } catch { return NextResponse.json({ error: "Directory database is not configured or unavailable." }, { status: 503 }); }
 }
 export async function POST(req: NextRequest) {
