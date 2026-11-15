@@ -1,3 +1,4 @@
+import { getAutomationControl, mailStartupReadiness } from "@/lib/nstp-automation";
 import { resolveMx } from "node:dns/promises";
 import { Business, Contact, Outreach, UUID, autoApprovedRoleContact, db, outreachHtml, researchEmails, rpc, sendMail, unsubscribeSignature, ORIGIN } from "@/lib/nstp-directory";
 
@@ -60,10 +61,11 @@ export async function researchBusiness(id: string) {
 }
 
 export async function sendClaimInvitations(limit = 5) {
-  if (process.env.NSTP_OUTREACH_ENABLED !== "true") throw new Error("Outreach is disabled.");
-  for (const envName of ["NSTP_POSTAL_ADDRESS", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "NSTP_TOKEN_SECRET"]) {
-    if (!process.env[envName]) throw new Error("Missing required email configuration: " + envName);
-  }
+  const control = await getAutomationControl();
+  if (!control.outreach_requested || control.mail_test_status !== "delivered")
+    throw new Error("Outreach requires an enabled campaign and confirmed test email delivery");
+  const readiness = mailStartupReadiness();
+  if (readiness) throw new Error("Email sender not ready: " + readiness);
   // This RPC owns daily limits, email/campaign uniqueness, and row-level locking.
   // Its reservation is durable even if a provider timeout makes delivery ambiguous.
   const reserved = await rpc<Outreach[]>("nstp_reserve_outreach", { p_limit: Math.max(0, Math.min(Number(limit) || 0, 5)) });

@@ -34,6 +34,27 @@ export async function POST(req: NextRequest) {
       ? await db<Outreach[]>("nstp_outreach", "GET",
         { provider_id: "eq." + providerId, select: "*", limit: "1" }) : [];
     const job = jobs[0];
+    if (providerId) {
+      const checks = await db<{ id: number; mail_test_status: string }[]>("nstp_automation_control", "GET", {
+        id: "eq.1", mail_test_provider_id: "eq." + providerId,
+        select: "id,mail_test_status", limit: "1"
+      });
+      if (checks[0] && ["testing","accepted"].includes(checks[0].mail_test_status)) {
+        if (event.type === "email.delivered") {
+          await db("nstp_automation_control", "PATCH",
+            { id: "eq.1", mail_test_status: "in.(testing,accepted)" }, {
+              mail_test_status: "delivered", mail_test_delivered_at: new Date().toISOString(),
+              mail_test_error: null, updated_at: new Date().toISOString()
+            });
+        } else if (["email.bounced","email.complained","email.suppressed","email.failed"].includes(event.type || "")) {
+          await db("nstp_automation_control", "PATCH",
+            { id: "eq.1", mail_test_status: "in.(testing,accepted)" }, {
+              mail_test_status: "failed", mail_test_error: "Resend event: " + event.type,
+              updated_at: new Date().toISOString()
+            });
+        }
+      }
+    }
     const eventStatus: Record<string, string> = {
       "email.sent": "accepted", "email.delivered": "delivered",
       "email.delivery_delayed": "delayed", "email.bounced": "bounced",

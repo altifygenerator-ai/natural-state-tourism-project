@@ -7,7 +7,11 @@ type Change = { id: string; business_id: string; status: string; submitted_by: s
 type Outreach = { id: string; contact_id: string; status: string; delivery_status?: string; last_error?: string | null; };
 type SiteMonth = { site: string; month: string; tracked_pageviews: number };
 type MonthlyDelivery = { id: string; month: string; status: string };
-type Settings = { senderIdentity?: string; dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; monthlyReportsEnabled: boolean; };
+type Settings = { automation?: { research_enabled: boolean; outreach_requested: boolean;
+  mail_test_status: string; mail_test_error: string | null;
+  mail_test_delivered_at: string | null; mail_test_started_at: string | null;
+  last_cron_at: string | null; last_cron_result: Record<string, unknown> | null; };
+  testReadiness?: string | null; senderIdentity?: string; dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; monthlyReportsEnabled: boolean; };
 type Dataset = { businesses: Business[]; contacts: Contact[]; claims: Claim[]; changes: Change[]; outreach: Outreach[]; siteMonthly?: SiteMonth[]; monthlyDeliveries?: MonthlyDelivery[]; settings?: Settings; };
 const empty: Dataset = { businesses: [], contacts: [], claims: [], changes: [], outreach: [] };
 export default function ManageBusinesses() {
@@ -130,6 +134,12 @@ export default function ManageBusinesses() {
         <button disabled={busy || !data.settings?.testRecipientConfigured || !data.settings?.senderConfigured}
           onClick={() => action("test-mail")} title={!data.settings?.testRecipientConfigured ? "Set NSTP_TEST_EMAIL in Vercel Production, then redeploy" : !data.settings?.senderConfigured ? "Set RESEND_API_KEY in Vercel Production" : "Send a single sample only to your configured test inbox"}
           className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527] disabled:opacity-50">Send controlled test email</button>
+        <button disabled={busy} onClick={() => action("start-mail-test")}
+          className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">Run sender test</button>
+        <button disabled={busy} onClick={() => action(data.settings?.automation?.outreach_requested ? "pause-automation" : "resume-automation")}
+          className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">
+          {data.settings?.automation?.outreach_requested ? "Pause automation" : "Resume automation"}
+        </button>
         <button disabled={busy || !data.settings?.outreachEnabled}
           onClick={() => action("send")} className="rounded-full bg-[#183527] px-5 py-2 text-sm font-bold text-white disabled:opacity-40">Send up to 5 approved invitations</button>
       </div>
@@ -153,6 +163,20 @@ export default function ManageBusinesses() {
         {!data.settings?.testRecipientConfigured && <p className="mt-3 text-sm font-medium text-[#805b3d]">
           The test-email button needs NSTP_TEST_EMAIL set to your own inbox in the main site&apos;s Vercel Production settings. Save and redeploy, then refresh this dashboard.
         </p>}
+        <div className="mt-4 text-sm text-[#3f5b48]">
+          <p><strong>Launch test:</strong> {data.settings?.automation?.mail_test_status || "Not set up"}
+            {data.settings?.automation?.mail_test_delivered_at ? " (confirmed via signed Resend webhook)" : ""}
+          </p>
+          {data.settings?.testReadiness && <p className="mt-1 text-[#8b5839]">Configuration: {data.settings.testReadiness}</p>}
+          {data.settings?.automation?.mail_test_error && <p className="mt-1 text-[#8b5839]">
+            Test error: {data.settings.automation.mail_test_error}
+          </p>}
+          <p className="mt-1 text-xs text-[#677468]">
+            Last daily cron: {data.settings?.automation?.last_cron_at
+              ? new Date(data.settings.automation.last_cron_at).toLocaleString()
+              : "Not yet recorded"}
+          </p>
+        </div>
         <p className="mt-3 text-sm text-[#647067]">
           Email delivery is guarded by production configuration. Research does not send mail. Sending uses a daily cap and permanent network-wide deduplication.
         </p>
