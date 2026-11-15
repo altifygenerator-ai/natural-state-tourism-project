@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       postalConfigured: Boolean(process.env.NSTP_POSTAL_ADDRESS),
       webhookConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET),
       testRecipientConfigured: Boolean(process.env.NSTP_TEST_EMAIL),
-      cronConfigured: Boolean(process.env.CRON_SECRET),
+      cronConfigured: Boolean(process.env.CRON_SECRET) || automation.database_scheduler_enabled,
       researchEnabled: automation.research_enabled,
       outreachEnabled: automation.outreach_requested && automation.mail_test_status === "delivered",
       monthlyReportsEnabled: process.env.NSTP_MONTHLY_REPORTS_ENABLED === "true",

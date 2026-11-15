@@ -1,14 +1,26 @@
 import { attemptFirstMailTest, getAutomationControl } from "@/lib/nstp-automation";
 import { NextRequest, NextResponse } from "next/server";
-import { Business, db } from "@/lib/nstp-directory";
+import { Business, db, rpc } from "@/lib/nstp-directory";
 import { researchBusiness, sendClaimInvitations } from "@/lib/nstp-workflows";
 import { finalizePreviousMonth, sendMonthlyReports } from "@/lib/nstp-monthly";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+export async function authorizedCron(req: NextRequest) {
+  const configured = process.env.CRON_SECRET;
+  if (configured && req.headers.get("authorization") === "Bearer " + configured) return true;
+  const timestamp = req.headers.get("x-nstp-cron-ts") || "";
+  const signature = req.headers.get("x-nstp-cron-signature") || "";
+  if (!/^[0-9]{10,11}$/.test(timestamp) || !/^[0-9a-f]{64}$/.test(signature) ||
+      Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false;
+  try {
+    return await rpc<boolean>("nstp_verify_cron_signature",
+      { p_timestamp: timestamp, p_signature: signature });
+  } catch { return false; }
+}
+
 export async function GET(req: NextRequest) {
-  const cron = process.env.CRON_SECRET;
-  if (!cron || req.headers.get("authorization") !== "Bearer " + cron)
+  if (!(await authorizedCron(req)))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const status = { researched: 0, discovered: 0, autoQueued: 0, sent: 0, failed: 0, errors: 0,
     reportsQueued: 0, reportsSent: 0, testStatus: "pending", testMessage: "", automationEnabled: false };

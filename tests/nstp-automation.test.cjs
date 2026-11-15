@@ -135,3 +135,36 @@ test("signed Resend delivery event unlocks one controlled test, but forged event
     assert.ok(state.mail_test_delivered_at);
   });
 });
+
+test("cron rejects unsigned and forged requests, accepts DB-verified fresh signatures",async()=>{
+ const old=process.env.CRON_SECRET;
+ delete process.env.CRON_SECRET;
+ let checked=0;
+ const cron=moduleFor("src/app/api/cron/nstp-directory/route.ts",{
+  "@/lib/nstp-directory":{rpc:async(name,body)=>{
+    checked++;
+    assert.equal(name,"nstp_verify_cron_signature");
+    assert.equal(body.p_signature,"a".repeat(64));
+    return true;
+  }},
+  "@/lib/nstp-workflows":{},
+  "@/lib/nstp-automation":{},
+  "@/lib/nstp-monthly":{},
+  "next/server":{NextResponse:{json:()=>({})}}
+ });
+ const req=(ts,sig,auth)=>({headers:{get:k=>k==="x-nstp-cron-ts"?ts:
+   k==="x-nstp-cron-signature"?sig:k==="authorization"?auth:null}});
+ try {
+  assert.equal(await cron.authorizedCron(req(null,null)),false);
+  assert.equal(await cron.authorizedCron(req(String(Math.floor(Date.now()/1000)-800),"a".repeat(64))),false);
+  assert.equal(await cron.authorizedCron(req(String(Math.floor(Date.now()/1000)),"0".repeat(63))),false);
+  assert.equal(checked,0);
+  assert.equal(await cron.authorizedCron(req(String(Math.floor(Date.now()/1000)),"a".repeat(64))),true);
+  assert.equal(checked,1);
+  process.env.CRON_SECRET="another-long-cron-secret";
+  assert.equal(await cron.authorizedCron(req(null,null,"Bearer another-long-cron-secret")),true);
+ } finally {
+  if(old===undefined)delete process.env.CRON_SECRET;
+  else process.env.CRON_SECRET=old;
+ }
+});

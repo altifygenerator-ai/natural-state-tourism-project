@@ -8,7 +8,7 @@ type Outreach = { id: string; contact_id: string; status: string; delivery_statu
 type SiteMonth = { site: string; month: string; tracked_pageviews: number };
 type MonthlyDelivery = { id: string; month: string; status: string };
 type Settings = { automation?: { research_enabled: boolean; outreach_requested: boolean;
-  mail_test_status: string; mail_test_error: string | null;
+  mail_test_status: string; database_scheduler_enabled?: boolean; mail_test_error: string | null;
   mail_test_delivered_at: string | null; mail_test_started_at: string | null;
   last_cron_at: string | null; last_cron_result: Record<string, unknown> | null; };
   testReadiness?: string | null; cronConfigured?: boolean; senderIdentity?: string; dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; monthlyReportsEnabled: boolean; };
@@ -149,7 +149,7 @@ export default function ManageBusinesses() {
             ["Auto-approve eligible role inboxes", data.settings?.roleContactAutoApprove],
             ["Mail sender", data.settings?.senderConfigured],
             ["Controlled test inbox", data.settings?.testRecipientConfigured],
-            ["Daily scheduler secret", data.settings?.cronConfigured],
+            ["Daily scheduler", data.settings?.cronConfigured],
             ["Postal address", data.settings?.postalConfigured],
             ["Delivery webhook", data.settings?.webhookConfigured],
             ["Automated outreach", data.settings?.outreachEnabled],
@@ -168,7 +168,7 @@ export default function ManageBusinesses() {
           </p>
           {data.settings?.testReadiness && <p className="mt-1 text-[#8b5839]">Configuration: {data.settings.testReadiness}</p>}
           {!data.settings?.cronConfigured && <p className="mt-1 text-[#8b5839]">
-            The daily Vercel job needs CRON_SECRET in Production to run automatically.
+            The daily schedule needs either Vercel CRON_SECRET or the signed Supabase scheduler.
           </p>}
           {data.settings?.automation?.mail_test_error && <p className="mt-1 text-[#8b5839]">
             Test error: {data.settings.automation.mail_test_error}
