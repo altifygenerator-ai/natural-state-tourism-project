@@ -65,6 +65,9 @@ test("claimed known business email -> single-use verification -> authorized edit
         Object.assign(state.claim,body);return [{...state.claim}];
       }
     }
+    if(table==="nstp_business_owners"&&method==="GET"){
+      return state.owner ? [{...state.owner, monthly_report_opt_in: false}] : [];
+    }
     if(table==="nstp_business_owners"&&method==="POST"){
       state.owner=body[0];return [{...state.owner}];
     }
