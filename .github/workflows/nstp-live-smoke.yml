@@ -3,7 +3,11 @@ on:
   workflow_dispatch:
   push:
     branches: [master]
-    paths: [".github/workflows/nstp-live-smoke.yml"]
+    paths:
+      - ".github/workflows/nstp-live-smoke.yml"
+      - "src/lib/nstp-directory.ts"
+      - "src/app/api/directory/admin/**"
+      - "src/app/api/contact/route.ts"
 permissions:
   contents: read
 jobs:

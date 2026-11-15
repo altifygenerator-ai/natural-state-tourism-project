@@ -1,3 +1,4 @@
+import { mailFrom } from "@/lib/nstp-directory";
 // src/app/api/contact/route.ts
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
     `;
 
     const { error } = await resend.emails.send({
-      from: "Natural State Tourism Project <noreply@hometownwebservicesar.cc>",
+      from: mailFrom(),
       to: ["naturalstatetourismproject@gmail.com"],
       replyTo: email,
       subject,

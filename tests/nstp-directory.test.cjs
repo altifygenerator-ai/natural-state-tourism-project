@@ -97,12 +97,14 @@ test("outreach email adds idempotency and one-click unsubscribe", async () => {
   const oldKey = process.env.RESEND_API_KEY;
   const oldSender = process.env.NSTP_MAIL_FROM;
   process.env.RESEND_API_KEY = "re_test";
-  process.env.NSTP_MAIL_FROM = "Natural State <sender@example.org>";
+  process.env.NSTP_MAIL_FROM = "Natural State Tourism Project <listings@naturalstatetourismproject.org>";
   const unsubscribe = "https://www.naturalstatetourismproject.org/api/directory/unsubscribe/one-click?c=test&s=token";
   global.fetch = async (url, options) => {
     assert.equal(url, "https://api.resend.com/emails");
     assert.equal(options.headers["Idempotency-Key"], "campaign-job-1");
     const msg = JSON.parse(options.body);
+    assert.equal(msg.from, "Natural State Tourism Project <listings@naturalstatetourismproject.org>");
+    assert.equal(msg.reply_to, "naturalstatetourismproject@gmail.com");
     assert.equal(msg.headers["List-Unsubscribe"], "<" + unsubscribe + ">");
     assert.equal(msg.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
     return { ok: true, json: async () => ({ id: "message-id" }) };
@@ -134,5 +136,35 @@ test("reservation RPC is authenticated using the server-only Supabase key", asyn
     global.fetch = original;
     if (oldUrl === undefined) delete process.env.NSTP_SUPABASE_URL; else process.env.NSTP_SUPABASE_URL = oldUrl;
     if (oldKey === undefined) delete process.env.NSTP_SUPABASE_SECRET_KEY; else process.env.NSTP_SUPABASE_SECRET_KEY = oldKey;
+  }
+});
+
+test("new domain is used by default and an obsolete From identity is rejected", () => {
+  const old = process.env.NSTP_MAIL_FROM;
+  delete process.env.NSTP_MAIL_FROM;
+  try {
+    assert.equal(directory.mailFrom(), directory.DEFAULT_NSTP_MAIL_FROM);
+    assert.equal(directory.mailReplyTo(), "naturalstatetourismproject@gmail.com");
+    process.env.NSTP_MAIL_FROM = "Natural State <no-reply@hometownwebservicesar.cc>";
+    assert.throws(() => directory.mailFrom(), /verified naturalstatetourismproject.org/);
+  } finally {
+    if (old === undefined) delete process.env.NSTP_MAIL_FROM;
+    else process.env.NSTP_MAIL_FROM = old;
+  }
+});
+test("email preview can render without a configured real postal address, but production cannot", () => {
+  const old = process.env.NSTP_POSTAL_ADDRESS;
+  delete process.env.NSTP_POSTAL_ADDRESS;
+  const b = { id: "17f9cd1e-2db5-4f12-8aa3-443cd5e40123", name: "Example Local Shop", city: "Hot Springs" };
+  const c = { id: "27f9cd1e-2db5-4f12-8aa3-443cd5e40123" };
+  try {
+    const html = directory.outreachHtml(b, c, {previewPostalAddress: "[Configure your real postal address]"});
+    assert.ok(html.includes("[Configure your real postal address]"));
+    assert.throws(() => directory.outreachHtml(b, c), /NSTP_POSTAL_ADDRESS/);
+    assert.ok(html.includes("Claim your free business listing"));
+    assert.ok(html.includes("naturalstatetourismproject.org"));
+  } finally {
+    if (old === undefined) delete process.env.NSTP_POSTAL_ADDRESS;
+    else process.env.NSTP_POSTAL_ADDRESS = old;
   }
 });

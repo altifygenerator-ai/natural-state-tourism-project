@@ -17,6 +17,27 @@ export type Claim = { id: string; business_id: string; email: string; status: st
 export type Change = { id: string; business_id: string; submitted_by: string; payload: Record<string, string>; status: string; submitted_at: string; };
 export type Outreach = { id: string; contact_id: string; campaign: string; status: string; attempts: number; sent_at: string | null; provider_id?: string | null; delivery_status?: string; };
 export const ORIGIN = "https://www.naturalstatetourismproject.org";
+export const NSTP_SENDING_DOMAIN = "naturalstatetourismproject.org";
+export const DEFAULT_NSTP_MAIL_FROM = "Natural State Tourism Project <listings@naturalstatetourismproject.org>";
+export const DEFAULT_NSTP_REPLY_TO = "naturalstatetourismproject@gmail.com";
+
+// All mail types must use the new verified Natural State domain. Never send
+// from an obsolete Hometown Web Services identity by accident.
+export function mailFrom(): string {
+  const from = (process.env.NSTP_MAIL_FROM || DEFAULT_NSTP_MAIL_FROM).trim();
+  if (/[\r\n]/.test(from)) throw new Error("Invalid mail sender");
+  const address = from.match(/(?:^|<)\s*([a-z0-9._%+-]+@[a-z0-9.-]+)\s*>?$/i)?.[1]?.toLowerCase();
+  if (!address || !emailAddress(address) || address.split("@")[1] !== NSTP_SENDING_DOMAIN) {
+    throw new Error("NSTP_MAIL_FROM must use the verified naturalstatetourismproject.org domain");
+  }
+  return from;
+}
+export function mailReplyTo(): string {
+  const replyTo = (process.env.NSTP_MAIL_REPLY_TO || DEFAULT_NSTP_REPLY_TO).trim();
+  if (!emailAddress(replyTo)) throw new Error("Invalid reply-to address");
+  return replyTo;
+}
+
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function configured() { return Boolean(process.env.NSTP_SUPABASE_URL && process.env.NSTP_SUPABASE_SECRET_KEY); }
@@ -124,7 +145,7 @@ export function escapeHtml(value: string) {
 }
 export async function sendMail(to: string, subject: string, html: string, options: { idempotencyKey?: string; unsubscribeUrl?: string } = {}) {
   const key = required("RESEND_API_KEY");
-  const from = required("NSTP_MAIL_FROM");
+  const from = mailFrom();
   if (!emailAddress(to) || to !== emailAddress(to)) throw new Error("Invalid recipient email");
   const headers: Record<string, string> = { Authorization: "Bearer " + key, "Content-Type": "application/json" };
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
@@ -132,7 +153,7 @@ export async function sendMail(to: string, subject: string, html: string, option
     "List-Unsubscribe": "<" + options.unsubscribeUrl + ">",
     "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
   } : undefined;
-  const body = { from, to: [to], subject, html, ...(emailHeaders ? { headers: emailHeaders } : {}) };
+  const body = { from, reply_to: mailReplyTo(), to: [to], subject, html, ...(emailHeaders ? { headers: emailHeaders } : {}) };
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST", headers, body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(12000)
   });
@@ -140,29 +161,29 @@ export async function sendMail(to: string, subject: string, html: string, option
   return await resp.json() as { id?: string };
 }
 function emailShell(body: string, footer = "") {
-  return '<div style="background:#f6f1e6;padding:32px 12px;font-family:Arial,sans-serif;color:#203b2a"><div style="max-width:560px;margin:auto;background:white;border:1px solid #e7e0d2;border-radius:12px;overflow:hidden"><div style="background:#183527;color:#fff;padding:26px;text-align:center"><img src="' + ORIGIN + '/images/logo.png" width="54" height="54" alt="Natural State Tourism Project" style="margin:auto auto 10px"><div style="font-size:17px;font-weight:700;letter-spacing:.8px">NATURAL STATE TOURISM PROJECT</div></div><div style="padding:30px;line-height:1.7">' + body + '</div><div style="padding:20px 30px;background:#f7f4ed;color:#596458;font-size:12px;line-height:1.7">Independent Arkansas tourism guides.' + footer + '</div></div></div>';
+  return '<div style="background:#f6f1e6;padding:32px 12px;font-family:Arial,sans-serif;color:#203b2a"><div style="max-width:560px;margin:auto;background:white;border:1px solid #e7e0d2;border-radius:12px;overflow:hidden"><div style="background:#183527;color:#fff;padding:26px;text-align:center"><img src="' + ORIGIN + '/images/logo.png" width="54" height="54" alt="Natural State Tourism Project" style="margin:auto auto 10px"><div style="font-size:17px;font-weight:700;letter-spacing:.8px">NATURAL STATE TOURISM PROJECT</div></div><div style="padding:30px;line-height:1.7">' + body + '</div><div style="padding:20px 30px;background:#f7f4ed;color:#596458;font-size:12px;line-height:1.7">Independent Arkansas tourism guides. <a href="' + ORIGIN + '" style="color:#416044;text-decoration:underline">naturalstatetourismproject.org</a>' + footer + '</div></div></div>';
 }
 export function claimHtml(business: Business, url: string) {
   return emailShell('<p>We received a request to verify ownership of <strong>' + escapeHtml(business.name) + '</strong>.</p><p>If this was you, use the secure link below to confirm your email and access the listing editor. The link expires in 24 hours.</p><p><a href="' + escapeHtml(url) + '" style="display:inline-block;background:#183527;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none">Verify my business</a></p><p>If you did not request this, you can ignore this email.</p>');
 }
-export function outreachHtml(business: Business, contact: Contact) {
+export function outreachHtml(business: Business, contact: Contact, options: { previewPostalAddress?: string } = {}) {
   const claimUrl = ORIGIN + "/claim/" + encodeURIComponent(business.id);
   const advertisingUrl = ORIGIN + "/advertising";
   const unsubscribeUrl = ORIGIN + "/unsubscribe?c=" + encodeURIComponent(contact.id) + "&s=" + encodeURIComponent(unsubscribeSignature(contact.id));
-  const postalAddress = escapeHtml(required("NSTP_POSTAL_ADDRESS"));
+  const postalAddress = escapeHtml(options.previewPostalAddress ?? required("NSTP_POSTAL_ADDRESS"));
   const name = escapeHtml(business.name);
   const city = escapeHtml(business.city);
   const body = [
-    '<p>Hi there,</p>',
-    '<p>This is a business directory invitation, including information about optional paid advertising.</p>',
-    '<p>We have <strong>' + name + '</strong> listed in our ' + city + ' visitor guide, part of the Natural State Tourism Project.</p>',
-    '<p>We\'re building a better way for people to discover local restaurants, shops, places to stay, and services around Arkansas. Just as important, we want local business owners to be able to keep their information correct.</p>',
-    '<p><strong>Claiming your basic business listing is free.</strong> You can verify ownership and submit updates to your hours, description, contact details, photos, or website for our team to review.</p>',
-    '<p><a href="' + escapeHtml(claimUrl) + '" style="display:inline-block;background:#d4a753;color:#183527;padding:13px 22px;border-radius:7px;font-weight:bold;text-decoration:none">Claim your free business listing</a></p>',
-    '<p>If you would like additional visibility, we also have optional <strong>featured placements starting at $20/month</strong> and <strong>business spotlight pages for $100 one time</strong>. Those are entirely separate from claiming your listing.</p>',
-    '<p><a href="' + escapeHtml(advertisingUrl) + '" style="color:#183527;text-decoration:underline">See featured listing options</a></p>',
+    '<p style="margin-top:0">Hi there,</p>',
+    '<p>We have <strong>' + name + '</strong> listed in our <strong>' + city + '</strong> visitor guide, part of the Natural State Tourism Project.</p>',
+    '<p>Our local guides help people discover places to eat, shop, stay and explore across Arkansas. We also want business owners to have an easy way to keep their information up to date.</p>',
+    '<p><strong>Claiming and updating your basic business listing is completely free.</strong> Once verified, you can submit corrections to your description, hours, phone number, website and photos for review.</p>',
+    '<p style="margin:25px 0"><a href="' + escapeHtml(claimUrl) + '" style="display:inline-block;background:#d4a753;color:#183527;padding:13px 22px;border-radius:7px;font-weight:700;text-decoration:none">Claim your free business listing</a></p>',
+    '<div style="border-top:1px solid #e5e6dc;margin:26px 0 0;padding:20px 0 0"><p style="margin:0 0 8px"><strong>Want a little more visibility?</strong></p>',
+    '<p style="margin:0">We also offer optional featured placements starting at $20/month and business spotlight pages for $100 one time. Those are separate from your free listing.</p>',
+    '<p style="margin:10px 0 0"><a href="' + escapeHtml(advertisingUrl) + '" style="color:#416044;text-decoration:underline">See featured listing options</a></p></div>',
     '<p>Whether you advertise with us or not, your basic listing remains free.</p>',
-    '<p>Thanks,<br><strong>Natural State Tourism Project</strong><br>Independent Arkansas tourism guides</p>'
+    '<p style="margin-bottom:0">Thanks,<br><strong>Natural State Tourism Project</strong><br>Independent Arkansas tourism guides</p>'
   ].join("");
   const footer = '<p style="margin:8px 0">' + postalAddress + '</p><a href="' + escapeHtml(unsubscribeUrl) + '">Unsubscribe from future business outreach</a>';
   return emailShell(body, footer);

@@ -7,7 +7,7 @@ type Change = { id: string; business_id: string; status: string; submitted_by: s
 type Outreach = { id: string; contact_id: string; status: string; delivery_status?: string; last_error?: string | null; };
 type SiteMonth = { site: string; month: string; tracked_pageviews: number };
 type MonthlyDelivery = { id: string; month: string; status: string };
-type Settings = { dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; monthlyReportsEnabled: boolean; };
+type Settings = { senderIdentity?: string; dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; monthlyReportsEnabled: boolean; };
 type Dataset = { businesses: Business[]; contacts: Contact[]; claims: Claim[]; changes: Change[]; outreach: Outreach[]; siteMonthly?: SiteMonth[]; monthlyDeliveries?: MonthlyDelivery[]; settings?: Settings; };
 const empty: Dataset = { businesses: [], contacts: [], claims: [], changes: [], outreach: [] };
 export default function ManageBusinesses() {
@@ -15,6 +15,8 @@ export default function ManageBusinesses() {
   const [data, setData] = useState<Dataset>(empty);
   const [loggedIn, setLoggedIn] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [emailPreview, setEmailPreview] = useState<{ from: string; replyTo: string; invitation: { subject: string; html: string }; verification: { subject: string; html: string } } | null>(null);
+  const [previewTab, setPreviewTab] = useState<"invitation" | "verification">("invitation");
   const [notice, setNotice] = useState("");
   const [city, setCity] = useState("All");
   const [search, setSearch] = useState("");
@@ -35,6 +37,18 @@ export default function ManageBusinesses() {
       setNotice(json.message || JSON.stringify(json));
       await load();
     } catch (error) { setNotice(error instanceof Error ? error.message : "Request failed"); }
+    finally { setBusy(false); }
+  }
+  async function previewEmails() {
+    setBusy(true); setNotice("");
+    try {
+      const response = await fetch("/api/directory/admin/preview", {
+        method: "POST", headers: { "x-nstp-admin-key": secret }, cache: "no-store"
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to preview mail");
+      setEmailPreview(data); setPreviewTab("invitation");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Preview failed"); }
     finally { setBusy(false); }
   }
   async function exportReport(kind: "site" | "business") {
@@ -83,6 +97,10 @@ export default function ManageBusinesses() {
       <div className="my-6 flex flex-wrap gap-3">
         <button disabled={busy} onClick={() => load().catch(e => setNotice(String(e)))} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">Refresh dashboard</button>
         <button disabled={busy} onClick={() => action("research-batch")} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">Research next 5 businesses</button>
+        <button disabled={busy} onClick={previewEmails}
+          className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">
+          Preview branded emails
+        </button>
         <button disabled={busy || !data.settings?.testRecipientConfigured || !data.settings?.senderConfigured}
           onClick={() => action("test-mail")} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527] disabled:opacity-50">Send controlled test email</button>
         <button disabled={busy || !data.settings?.outreachEnabled}
@@ -109,6 +127,19 @@ export default function ManageBusinesses() {
         </p>
       </div>
       {notice && <p role="status" className="mb-6 rounded-lg bg-[#e7efdf] p-4 text-[#183527]">{notice}</p>}
+
+      {emailPreview && <section className="mt-9 rounded-xl border border-[#e1e2d7] bg-white p-5">
+        <p className="text-xs font-bold uppercase tracking-[.15em] text-[#8e6b2c]">Preview only · Nothing sent</p>
+        <h2 className="mt-1 font-heading text-2xl font-bold text-[#183527]">Branded email preview</h2>
+        <p className="mt-2 break-all text-xs text-[#667466]">From: {emailPreview.from} · Replies: {emailPreview.replyTo}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" onClick={() => setPreviewTab("invitation")} className={"rounded-full px-4 py-2 text-sm font-bold " + (previewTab === "invitation" ? "bg-[#183527] text-white" : "border text-[#183527]")}>Listing invitation</button>
+          <button type="button" onClick={() => setPreviewTab("verification")} className={"rounded-full px-4 py-2 text-sm font-bold " + (previewTab === "verification" ? "bg-[#183527] text-white" : "border text-[#183527]")}>Claim verification</button>
+        </div>
+        <p className="mt-4 text-sm font-semibold text-[#233b2a]">Subject: {emailPreview[previewTab].subject}</p>
+        <iframe title="Branded email rendered preview" sandbox="" srcDoc={emailPreview[previewTab].html} className="mt-3 h-[820px] w-full rounded-lg border bg-[#f6f1e6]" />
+        <p className="mt-3 text-xs text-[#677166]">Business and verification links shown here use sample data and are not live claims.</p>
+      </section>}
       <section className="mt-10 rounded-xl border border-[#e1e2d7] bg-white p-6">
         <h2 className="font-heading text-2xl font-bold text-[#183527]">Monthly measured reach</h2>
         <p className="mt-2 text-sm leading-6 text-[#627064]">These are first-party, deduplicated tracked pageviews and referral clicks, not guaranteed unique visitors, new customers, or sales. Older Vercel analytics cannot be backfilled into this tracker.</p>
