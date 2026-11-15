@@ -5,6 +5,7 @@ export type AutomationControl = {
   id: number;
   research_enabled: boolean;
   outreach_requested: boolean;
+  database_scheduler_enabled: boolean;
   mail_test_status: "pending" | "testing" | "accepted" | "delivered" | "failed";
   mail_test_provider_id: string | null;
   mail_test_recipient: string | null;
