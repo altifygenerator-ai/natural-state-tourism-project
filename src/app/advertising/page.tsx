@@ -6,6 +6,7 @@ import PlacementTypes from "@/components/advertising/PlacementTypes";
 import FeaturedExample from "@/components/advertising/FeaturedExample";
 import PricingSection from "@/components/advertising/PricingSection";
 import PartnerCTA from "@/components/advertising/PartnerCTA";
+import MeasuredReach from "@/components/advertising/MeasuredReach";
 
 export const metadata: Metadata = {
   title: "Advertise With Natural State Tourism Project",
@@ -30,6 +31,7 @@ export default function AdvertisingPage() {
       <PlacementTypes />
       <FeaturedExample />
       <PricingSection />
+      <MeasuredReach />
       <PartnerCTA />
     </>
   );

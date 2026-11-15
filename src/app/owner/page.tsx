@@ -86,6 +86,14 @@ export default function OwnerPage() {
             <span>{labelMonth(m.month)}</span><span>{m.profile_views} profile views · {m.website_clicks} website clicks</span>
           </div>)}</div>
         </div>}
+        {data.siteHistory?.some(x => x.tracked_pageviews > 0) &&
+          <div className="mt-5 rounded-lg bg-[#f5f6ef] p-4 text-sm text-[#596a5b]">
+            <p className="font-semibold text-[#183527]">Your city's guide reach</p>
+            {data.siteHistory.filter(x => x.tracked_pageviews > 0).slice(0, 2).map(x =>
+              <p className="mt-1" key={x.month}>{labelMonth(x.month)}:{" "}
+                {x.tracked_pageviews.toLocaleString()} tracked pageviews across the {data.business.city} guide.</p>)}
+            <p className="mt-2 text-xs">Guide-wide pageviews are not views of your business listing or guaranteed customer referrals.</p>
+          </div>}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t pt-4">
           <div><p className="text-sm font-semibold text-[#183527]">Email my monthly report</p>
             <p className="mt-1 text-xs text-[#667465]">Optional. Only sent for months with recorded activity.</p></div>

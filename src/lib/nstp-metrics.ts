@@ -62,7 +62,7 @@ export async function recordBusinessInteraction(req: NextRequest,
 export async function recordSiteView(req: NextRequest, site: string, path: string) {
   if (!Object.hasOwn(siteCities, site) || !path.startsWith("/") || path.length > 200) return false;
   // Avoid tracking admin, claim-token URLs and account sessions.
-  if (/^\/(api|manage-businesses|verify-business|owner|unsubscribe|claim)(\/|$)/.test(path)) return false;
+  if (/^\/(api|admin|dashboard|host|login|sign-in|manage-businesses|verify-business|owner|unsubscribe|claim)(\/|$)/.test(path)) return false;
   await db("nstp_site_pageviews", "POST", { on_conflict: "site,path,visitor_bucket" },
     [{ site, path, visitor_bucket: visitorBucket(req, site + path) }],
     "resolution=ignore-duplicates,return=minimal");
