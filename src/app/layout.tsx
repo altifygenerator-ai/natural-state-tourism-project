@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import TrafficBeacon from "@/components/directory/TrafficBeacon";
 import "./globals.css";
 
 const siteUrl = "https://www.naturalstatetourismproject.org";
@@ -117,6 +118,7 @@ export default function RootLayout({
         <Header />
         <main>{children}</main>
         <Footer />
+        <TrafficBeacon />
         <Analytics />
       </body>
     </html>

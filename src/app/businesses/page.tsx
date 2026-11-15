@@ -36,7 +36,8 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
           <p className="mt-3 line-clamp-3 grow text-sm leading-6 text-[#5b665c]">{b.description || "Find this local stop in our Arkansas area guides."}</p>
           {b.address && <p className="mt-4 text-sm text-[#667064]">{b.address}</p>}
           <div className="mt-6 flex flex-wrap gap-4 border-t pt-4 text-sm font-bold">
-            {b.website && <a className="text-[#183527] underline" href={b.website} target="_blank" rel="noopener noreferrer">Visit website</a>}
+            {b.website && <a className="text-[#183527] underline" href={"/api/directory/out/" + b.id + "?placement=directory-card"} target="_blank" rel="noopener noreferrer">Visit website</a>}
+            <Link className="text-[#183527] underline" href={"/businesses/" + b.id}>View profile</Link>
             <Link className="text-[#906c2c] underline" href={"/claim/" + b.id}>Claim or correct listing</Link>
           </div>
         </article>)}
@@ -45,6 +46,7 @@ export default async function BusinessesPage({ searchParams }: { searchParams: P
         <h2 className="font-heading text-3xl font-bold">Is your business missing?</h2>
         <p className="mt-3 max-w-2xl text-white/80">Reach out to suggest a new business or correct an existing listing. Free listings are separate from paid featured placements.</p>
         <Link href="/contact" className="mt-6 inline-block rounded-full bg-[#d4a753] px-6 py-3 text-sm font-bold text-[#183527]">Contact the team</Link>
+        <p className="mt-5 text-sm text-white/75">Own a business here? Claiming your basic listing is free. <Link href="/advertising" className="underline">Featured and spotlight options</Link> are available separately.</p>
       </div>
     </div>
   </main>;
