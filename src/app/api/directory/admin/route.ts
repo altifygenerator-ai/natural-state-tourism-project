@@ -1,11 +1,12 @@
+import { attemptFirstMailTest, getAutomationControl, mailStartupReadiness } from "@/lib/nstp-automation";
 import { NextRequest, NextResponse } from "next/server";
-import { Business, Change, Claim, Contact, Outreach, UUID, ADMIN_SESSION_COOKIE, ADMIN_SESSION_SECONDS, adminAllowed, adminKeyAllowed, adminSessionCookie, cleanChanges, db, digest, claimHtml, outreachHtml, mailFrom, sendMail, token } from "@/lib/nstp-directory";
+import { Business, Change, Claim, Contact, Outreach, UUID, ADMIN_SESSION_COOKIE, ADMIN_SESSION_SECONDS, adminAllowed, adminKeyAllowed, adminSessionCookie, cleanChanges, db, digest, claimHtml, mailFrom, sendMail, token } from "@/lib/nstp-directory";
 import { researchBusiness, sendClaimInvitations, suppressEmail } from "@/lib/nstp-workflows";
 export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   if (!adminAllowed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const [businesses, contacts, claims, changes, outreach, siteMonthly, monthlyDeliveries] = await Promise.all([
+    const [businesses, contacts, claims, changes, outreach, siteMonthly, monthlyDeliveries, automation] = await Promise.all([
       db<Business[]>("nstp_businesses", "GET", { select: "*", order: "city.asc,name.asc", limit: "750" }),
       db<Contact[]>("nstp_business_contacts", "GET", { select: "*", order: "researched_at.desc", limit: "500" }),
       db<Claim[]>("nstp_claim_requests", "GET", { select: "id,business_id,email,status,created_at", order: "created_at.desc", limit: "200" }),
@@ -14,7 +15,8 @@ export async function GET(req: NextRequest) {
       db<{ site: string; month: string; tracked_pageviews: number }[]>("nstp_monthly_site_stats", "GET",
         { select: "site,month,tracked_pageviews", order: "month.desc", limit: "72" }),
       db<{ id: string; month: string; status: string }[]>("nstp_monthly_report_deliveries", "GET",
-        { select: "id,month,status", order: "created_at.desc", limit: "500" })
+        { select: "id,month,status", order: "created_at.desc", limit: "500" }),
+      getAutomationControl()
     ]);
     const settings = {
       dbConfigured: Boolean(process.env.NSTP_SUPABASE_SECRET_KEY && process.env.NSTP_SUPABASE_URL),
@@ -23,10 +25,13 @@ export async function GET(req: NextRequest) {
       postalConfigured: Boolean(process.env.NSTP_POSTAL_ADDRESS),
       webhookConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET),
       testRecipientConfigured: Boolean(process.env.NSTP_TEST_EMAIL),
-      researchEnabled: process.env.NSTP_RESEARCH_ENABLED === "true",
-      outreachEnabled: process.env.NSTP_OUTREACH_ENABLED === "true",
+      cronConfigured: Boolean(process.env.CRON_SECRET),
+      researchEnabled: automation.research_enabled,
+      outreachEnabled: automation.outreach_requested && automation.mail_test_status === "delivered",
       monthlyReportsEnabled: process.env.NSTP_MONTHLY_REPORTS_ENABLED === "true",
-      roleContactAutoApprove: process.env.NSTP_AUTO_APPROVE_ROLE_CONTACTS !== "false"
+      roleContactAutoApprove: process.env.NSTP_AUTO_APPROVE_ROLE_CONTACTS !== "false",
+      automation,
+      testReadiness: mailStartupReadiness()
     };
     const response = NextResponse.json({ businesses, contacts, claims, changes, outreach, siteMonthly, monthlyDeliveries, settings },
       { headers: { "Cache-Control": "private, no-store" } });
@@ -50,23 +55,18 @@ export async function POST(req: NextRequest) {
       });
       return response;
     }
-    if (body.action === "send") return NextResponse.json(await sendClaimInvitations(body.limit));
-    if (body.action === "test-mail") {
-      const email = process.env.NSTP_TEST_EMAIL;
-      if (!email) return NextResponse.json({ error: "NSTP_TEST_EMAIL must be configured with a controlled inbox." }, { status: 409 });
-      const businesses = await db<Business[]>("nstp_businesses", "GET",
-        { status: "eq.active", select: "*", order: "name.asc", limit: "1" });
-      if (!businesses.length) return NextResponse.json({ error: "No businesses available for sample." }, { status: 409 });
-      const sample = businesses[0];
-      const sampleContact = { id: "27f9cd1e-2db5-4f12-8aa3-443cd5e40123" } as Contact;
-      const previewHtml = outreachHtml(sample, sampleContact);
-      await sendMail(email, "[TEST] Your free listing in the " + sample.city + " Arkansas guide",
-        '<p style="font-family:Arial,sans-serif;padding:12px;background:#fff3d6;color:#6b4217">' +
-        '<strong>TEST EMAIL ONLY.</strong> The email below is a rendering preview. ' +
-        'Claim and unsubscribe example links should not be used.</p>' + previewHtml,
-        { idempotencyKey: "nstp-invitation-preview-" + new Date().toISOString().slice(0, 16).replaceAll(":", "-") });
-      return NextResponse.json({ message: "Test email submitted to the configured test inbox." });
+    if (body.action === "pause-automation" || body.action === "resume-automation") {
+      const on = body.action === "resume-automation";
+      await db("nstp_automation_control", "PATCH", { id: "eq.1" }, {
+        outreach_requested: on, research_enabled: on, updated_at: new Date().toISOString()
+      });
+      return NextResponse.json({ message: on ? "Automatic research and outreach resumed. Business emails still require a delivered test." : "Automatic research and business invitations paused." });
     }
+    if (body.action === "start-mail-test") {
+      return NextResponse.json(await attemptFirstMailTest());
+    }
+    if (body.action === "send") return NextResponse.json(await sendClaimInvitations(body.limit));
+    if (body.action === "test-mail") return NextResponse.json(await attemptFirstMailTest());
     if (body.action === "research-batch") {
       const olderThan = new Date(Date.now() - 30 * 86400000).toISOString();
       const targets = await db<Business[]>("nstp_businesses", "GET",

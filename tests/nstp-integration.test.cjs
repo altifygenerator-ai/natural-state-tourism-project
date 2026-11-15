@@ -118,7 +118,9 @@ test("claimed known business email -> single-use verification -> authorized edit
   assert.equal(state.edit.payload.name,undefined);
   const adminRoute=loadModule("src/app/api/directory/admin/route.ts",{
     "@/lib/nstp-directory":helpers,
-    "@/lib/nstp-workflows":{ researchBusiness:()=>{},sendClaimInvitations:()=>{}, suppressEmail:()=>{} }
+    "@/lib/nstp-workflows":{ researchBusiness:()=>{},sendClaimInvitations:()=>{}, suppressEmail:()=>{} },
+    "@/lib/nstp-automation":{ getAutomationControl:async()=>({research_enabled:true,mail_test_status:"pending"}),
+      attemptFirstMailTest:async()=>({status:"pending"}),mailStartupReadiness:()=>null }
   });
   const approved=await adminRoute.POST({json:async()=>({action:"approve-edit",id:uuidChange})});
   assert.equal(approved.status,200);
@@ -180,6 +182,7 @@ test("signed bounce webhook suppresses affected email and rejects forged signatu
   const route=loadModule("src/app/api/directory/webhooks/resend/route.ts",{
     "@/lib/nstp-directory":{...directory,
       db:async(table,method,params,body)=>{
+        if(table==="nstp_automation_control"&&method==="GET")return [];
         if(table==="nstp_outreach"&&method==="GET")return [{id:uuidClaim,contact_id:uuidContact}];
         if(table==="nstp_outreach"&&method==="PATCH"){statusPatched=body;return [body];}
         if(table==="nstp_business_contacts")return [contact];
