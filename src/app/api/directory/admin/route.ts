@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Business, Change, Claim, Contact, Outreach, UUID, adminAllowed, cleanChanges, db, digest, claimHtml, sendMail, token } from "@/lib/nstp-directory";
-import { researchBusiness, sendClaimInvitations } from "@/lib/nstp-workflows";
+import { researchBusiness, sendClaimInvitations, suppressEmail } from "@/lib/nstp-workflows";
 export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   if (!adminAllowed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,7 +12,17 @@ export async function GET(req: NextRequest) {
       db<Change[]>("nstp_business_changes", "GET", { select: "*", order: "submitted_at.desc", limit: "200" }),
       db<Outreach[]>("nstp_outreach", "GET", { select: "*", order: "created_at.desc", limit: "500" })
     ]);
-    return NextResponse.json({ businesses, contacts, claims, changes, outreach }, { headers: { "Cache-Control": "private, no-store" } });
+    const settings = {
+      dbConfigured: Boolean(process.env.NSTP_SUPABASE_SECRET_KEY && process.env.NSTP_SUPABASE_URL),
+      senderConfigured: Boolean(process.env.RESEND_API_KEY && process.env.NSTP_MAIL_FROM),
+      postalConfigured: Boolean(process.env.NSTP_POSTAL_ADDRESS),
+      webhookConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET),
+      testRecipientConfigured: Boolean(process.env.NSTP_TEST_EMAIL),
+      researchEnabled: process.env.NSTP_RESEARCH_ENABLED === "true",
+      outreachEnabled: process.env.NSTP_OUTREACH_ENABLED === "true",
+      roleContactAutoApprove: process.env.NSTP_AUTO_APPROVE_ROLE_CONTACTS !== "false"
+    };
+    return NextResponse.json({ businesses, contacts, claims, changes, outreach, settings }, { headers: { "Cache-Control": "private, no-store" } });
   } catch { return NextResponse.json({ error: "Directory database is not configured or unavailable." }, { status: 503 }); }
 }
 export async function POST(req: NextRequest) {
@@ -20,15 +30,45 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as { action?: string; id?: string; limit?: number };
     if (body.action === "send") return NextResponse.json(await sendClaimInvitations(body.limit));
+    if (body.action === "test-mail") {
+      const email = process.env.NSTP_TEST_EMAIL;
+      if (!email) return NextResponse.json({ error: "NSTP_TEST_EMAIL must be configured with a controlled inbox." }, { status: 409 });
+      await sendMail(email, "Natural State business email test",
+        '<div style="font-family:Arial,sans-serif;padding:30px;background:#f4efe4;color:#183527"><h1>Natural State Tourism Project</h1><p>Your directory sender is working. This is a test only; no business invitations were sent.</p></div>',
+        { idempotencyKey: "nstp-test-" + new Date().toISOString().slice(0, 16).replaceAll(":", "-") });
+      return NextResponse.json({ message: "Test email submitted to the configured test inbox." });
+    }
+    if (body.action === "research-batch") {
+      const olderThan = new Date(Date.now() - 30 * 86400000).toISOString();
+      const targets = await db<Business[]>("nstp_businesses", "GET",
+        { select: "id", website: "not.is.null", status: "eq.active",
+          or: "(last_researched_at.is.null,last_researched_at.lt." + olderThan + ")",
+          order: "last_researched_at.asc.nullsfirst", limit: "5" });
+      const results = await Promise.allSettled(targets.map(b => researchBusiness(b.id)));
+      const success = results.filter(r => r.status === "fulfilled");
+      const added = success.reduce((sum, r) => sum + (r.status === "fulfilled" ? r.value.added : 0), 0);
+      const queued = success.reduce((sum, r) => sum + (r.status === "fulfilled" ? r.value.queued : 0), 0);
+      return NextResponse.json({ message: "Research checked " + success.length + " businesses, found " + added +
+          " new contacts and queued " + queued + " eligible business inboxes. No emails sent.",
+        errors: results.length - success.length });
+    }
     if (!UUID.test(body.id || "")) return NextResponse.json({ error: "Invalid record ID" }, { status: 400 });
     const id = body.id as string;
     if (body.action === "research") return NextResponse.json(await researchBusiness(id));
+    if (body.action === "suppress-contact") {
+      const match = await db<Contact[]>("nstp_business_contacts", "GET", { id: "eq." + id, select: "*", limit: "1" });
+      if (!match.length) return NextResponse.json({ error: "Contact not found." }, { status: 404 });
+      await suppressEmail(match[0].email, "manual");
+      return NextResponse.json({ message: "This address is suppressed across the whole network." });
+    }
     if (body.action === "approve-contact" || body.action === "reject-contact") {
       const rows = await db<Contact[]>("nstp_business_contacts", "GET", { id: "eq." + id, select: "*", limit: "1" });
       const contact = rows[0];
       if (!contact) return NextResponse.json({ error: "Contact not found." }, { status: 404 });
       const unsub = await db<Contact[]>("nstp_business_contacts", "GET", { email: "eq." + contact.email, review_status: "eq.unsubscribed", select: "id", limit: "1" });
-      if (unsub.length) return NextResponse.json({ error: "This email has opted out." }, { status: 409 });
+      const suppressed = await db<{ email: string }[]>("nstp_suppression", "GET",
+        { email: "eq." + contact.email, select: "email", limit: "1" });
+      if (unsub.length || suppressed.length) return NextResponse.json({ error: "This email is suppressed." }, { status: 409 });
       const yes = body.action === "approve-contact";
       await db("nstp_business_contacts", "PATCH", { id: "eq." + id },
         { review_status: yes ? "approved" : "rejected", claim_eligible: yes, approved_at: yes ? new Date().toISOString() : null });
@@ -47,7 +87,7 @@ export async function POST(req: NextRequest) {
       const expiry = new Date(Date.now() + 86400000).toISOString();
       await db("nstp_claim_requests", "PATCH", { id: "eq." + id, status: "eq.pending" },
         { status: "invited", token_hash: digest(secret), expires_at: expiry });
-      const link = "https://www.naturalstatetourismproject.org/api/directory/verify?id=" + id + "&token=" + encodeURIComponent(secret);
+      const link = "https://www.naturalstatetourismproject.org/verify-business?id=" + id + "&token=" + encodeURIComponent(secret);
       try { await sendMail(claim.email, "Verify your listing: " + businesses[0].name, claimHtml(businesses[0], link)); }
       catch {
         await db("nstp_claim_requests", "PATCH", { id: "eq." + id }, { status: "pending", token_hash: null });

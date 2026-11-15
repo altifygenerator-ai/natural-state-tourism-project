@@ -1,6 +1,8 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
 import { lookup } from "node:dns/promises";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import type { NextRequest } from "next/server";
 
 export type Business = {
@@ -13,7 +15,7 @@ export type Business = {
 export type Contact = { id: string; business_id: string; email: string; source_url: string | null; confidence: string; review_status: string; claim_eligible: boolean; };
 export type Claim = { id: string; business_id: string; email: string; status: string; token_hash: string | null; expires_at: string | null; created_at: string; };
 export type Change = { id: string; business_id: string; submitted_by: string; payload: Record<string, string>; status: string; submitted_at: string; };
-export type Outreach = { id: string; contact_id: string; campaign: string; status: string; attempts: number; sent_at: string | null; };
+export type Outreach = { id: string; contact_id: string; campaign: string; status: string; attempts: number; sent_at: string | null; provider_id?: string | null; delivery_status?: string; };
 export const ORIGIN = "https://www.naturalstatetourismproject.org";
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -34,6 +36,24 @@ export async function db<T>(table: string, method = "GET", params: Record<string
   if (!response.ok) throw new Error("Directory database returned " + response.status);
   const raw = await response.text();
   return (raw ? JSON.parse(raw) : null) as T;
+}
+export async function rpc<T>(name: string, body: unknown): Promise<T> {
+  if (!/^nstp_[a-z_]+$/.test(name)) throw new Error("Invalid RPC");
+  const key = required("NSTP_SUPABASE_SECRET_KEY");
+  const url = new URL(required("NSTP_SUPABASE_URL").replace(/\/$/, "") + "/rest/v1/rpc/" + name);
+  const headers: Record<string, string> = { apikey: key, "Content-Type": "application/json" };
+  if (key.startsWith("eyJ")) headers.Authorization = "Bearer " + key;
+  const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), cache: "no-store" });
+  if (!response.ok) throw new Error("Directory reservation failed: " + response.status);
+  return await response.json() as T;
+}
+export function autoApprovedRoleContact(website: string, email: string, confidence: string): boolean {
+  if (confidence !== "high" || !emailAddress(email) || !safePublicUrl(website)) return false;
+  const origin = new URL(website);
+  const websiteDomain = origin.hostname.toLowerCase().replace(/^www\./, "");
+  const [local, domain] = email.toLowerCase().split("@");
+  const businessRoles = new Set(["info","contact","hello","office","reservations","reservation","booking","bookings","sales","service","customerservice","frontdesk","reception","manager"]);
+  return domain === websiteDomain && businessRoles.has(local);
 }
 export function digest(token: string) { return createHash("sha256").update(token).digest("hex"); }
 export function token() { return randomBytes(32).toString("base64url"); }
@@ -102,12 +122,19 @@ export function safePublicUrl(value: string) {
 export function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 }
-export async function sendMail(to: string, subject: string, html: string) {
+export async function sendMail(to: string, subject: string, html: string, options: { idempotencyKey?: string; unsubscribeUrl?: string } = {}) {
   const key = required("RESEND_API_KEY");
   const from = required("NSTP_MAIL_FROM");
+  if (!emailAddress(to) || to !== emailAddress(to)) throw new Error("Invalid recipient email");
+  const headers: Record<string, string> = { Authorization: "Bearer " + key, "Content-Type": "application/json" };
+  if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
+  const emailHeaders = options.unsubscribeUrl ? {
+    "List-Unsubscribe": "<" + options.unsubscribeUrl + ">",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
+  } : undefined;
+  const body = { from, to: [to], subject, html, ...(emailHeaders ? { headers: emailHeaders } : {}) };
   const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject, html }), cache: "no-store"
+    method: "POST", headers, body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(12000)
   });
   if (!resp.ok) throw new Error("Email provider returned " + resp.status);
   return await resp.json() as { id?: string };
@@ -127,6 +154,7 @@ export function outreachHtml(business: Business, contact: Contact) {
   const city = escapeHtml(business.city);
   const body = [
     '<p>Hi there,</p>',
+    '<p>This is a business directory invitation, including information about optional paid advertising.</p>',
     '<p>We have <strong>' + name + '</strong> listed in our ' + city + ' visitor guide, part of the Natural State Tourism Project.</p>',
     '<p>We\'re building a better way for people to discover local restaurants, shops, places to stay, and services around Arkansas. Just as important, we want local business owners to be able to keep their information correct.</p>',
     '<p><strong>Claiming your basic business listing is free.</strong> You can verify ownership and submit updates to your hours, description, contact details, photos, or website for our team to review.</p>',
@@ -157,40 +185,83 @@ async function approvedHost(urlString: string): Promise<URL> {
   return url;
 }
 
+type SafeResponse = { status: number; location: string; contentType: string; body: string };
+async function pinnedTextRequest(url: URL, maxBytes: number, timeoutMs: number): Promise<SafeResponse> {
+  // Pin the validated DNS address to the actual socket. A second DNS resolution
+  // during fetch could otherwise redirect a public-looking host to a private IP.
+  const candidates = await lookup(url.hostname, { all: true });
+  if (!candidates.length || candidates.some(({ address, family }) =>
+      family === 4 ? privateIPv4(address) :
+      address === "::" || address === "::1" || address.startsWith("fc") ||
+      address.startsWith("fd") || address.startsWith("fe80") ||
+      address.startsWith("ff") || address.startsWith("::ffff:"))) throw new Error("Blocked unsafe website address");
+  const selected = candidates.find(x => x.family === 4) || candidates[0];
+  const requester = url.protocol === "https:" ? httpsRequest : httpRequest;
+  return await new Promise<SafeResponse>((resolve, reject) => {
+    const request = requester(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": "NaturalStateTourismDirectoryBot/1.0 (+https://www.naturalstatetourismproject.org)",
+        Accept: "text/html,text/plain;q=0.9,*/*;q=0.1",
+        "Accept-Encoding": "identity"
+      },
+      lookup: (_hostname, _options, callback) => callback(null, selected.address, selected.family)
+    }, response => {
+      const contentType = String(response.headers["content-type"] || "");
+      const location = String(response.headers.location || "");
+      const contentLength = Number(response.headers["content-length"] || 0);
+      if (contentLength > maxBytes) {
+        request.destroy(new Error("Response exceeds limit"));
+        return;
+      }
+      const chunks: Buffer[] = [];
+      let length = 0;
+      response.on("data", (chunk: Buffer) => {
+        length += chunk.length;
+        if (length > maxBytes) request.destroy(new Error("Response exceeds limit"));
+        else chunks.push(chunk);
+      });
+      response.on("end", () => resolve({
+        status: response.statusCode || 0, location, contentType,
+        body: Buffer.concat(chunks).toString("utf8")
+      }));
+      response.on("error", reject);
+    });
+    request.setTimeout(timeoutMs, () => request.destroy(new Error("Website timed out")));
+    request.on("error", reject);
+    request.end();
+  });
+}
 async function readPage(url: URL) {
   const baseDomain = url.hostname.replace(/^www\./, "");
   let current = url;
   for (let redirect = 0; redirect < 3; redirect++) {
-    const resp = await fetch(current, { signal: AbortSignal.timeout(6500), redirect: "manual",
-      headers: { "User-Agent": "NaturalStateTourismDirectoryBot/1.0 (+https://www.naturalstatetourismproject.org)" } });
-    if ([301, 302, 303, 307, 308].includes(resp.status)) {
-      const location = resp.headers.get("location");
-      if (!location) return "";
-      const next = await approvedHost(new URL(location, current).href);
+    const response = await pinnedTextRequest(current, 250000, 6000);
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      if (!response.location) return "";
+      const next = await approvedHost(new URL(response.location, current).href);
       if (next.hostname.replace(/^www\./, "") !== baseDomain) return "";
       current = next;
       continue;
     }
-    if (!resp.ok || !(resp.headers.get("content-type") || "").includes("text/html")) return "";
-    const length = Number(resp.headers.get("content-length") || 0);
-    if (length > 300000) return "";
-    return (await resp.text()).slice(0, 300000);
+    if (response.status < 200 || response.status >= 300 || !response.contentType.includes("text/html")) return "";
+    return response.body;
   }
   return "";
 }
 async function blockedPaths(origin: string): Promise<string[]> {
   try {
     const url = await approvedHost(new URL("/robots.txt", origin).href);
-    const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(3500) });
-    if (!response.ok) return [];
-    const text = (await response.text()).slice(0, 40000);
+    const response = await pinnedTextRequest(url, 40000, 3500);
+    if (response.status !== 200) return [];
     const excluded: string[] = [];
     let applies = false;
-    for (const raw of text.split(/\r?\n/)) {
+    for (const raw of response.body.split(/\r?\n/)) {
       const line = raw.split("#")[0].trim();
       const [key, ...rest] = line.split(":");
       const value = rest.join(":").trim();
-      if (key?.toLowerCase() === "user-agent") applies = value === "*" || /NaturalStateTourismDirectoryBot/i.test(value);
+      if (key?.toLowerCase() === "user-agent")
+        applies = value === "*" || /NaturalStateTourismDirectoryBot/i.test(value);
       if (applies && key?.toLowerCase() === "disallow" && value.startsWith("/")) excluded.push(value);
     }
     return excluded;

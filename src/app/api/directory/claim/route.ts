@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const secret = token();
     const expires = new Date(Date.now() + 86400000).toISOString();
     const created = await db<Claim[]>("nstp_claim_requests", "POST", {}, [{ business_id: businessId, email, status: "invited", token_hash: digest(secret), expires_at: expires, request_fingerprint: fingerprint }]);
-    const verifyUrl = new URL("/api/directory/verify", "https://www.naturalstatetourismproject.org");
+    const verifyUrl = new URL("/verify-business", "https://www.naturalstatetourismproject.org");
     verifyUrl.searchParams.set("id", created[0].id); verifyUrl.searchParams.set("token", secret);
     try { await sendMail(email, "Verify your listing: " + business[0].name, claimHtml(business[0], verifyUrl.toString())); }
     catch {
