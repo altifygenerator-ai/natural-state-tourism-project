@@ -18,6 +18,7 @@ jobs:
           curl --fail-with-body --silent --show-error --location --retry 3 --retry-delay 3 --max-time 25 "https://www.naturalstatetourismproject.org/api/directory/public?city=Glenwood" -o /tmp/nstp.json
           node --input-type=module -e 'import fs from "node:fs"; const j=JSON.parse(fs.readFileSync("/tmp/nstp.json","utf8")); if(!Array.isArray(j.businesses)||!j.businesses.length)throw Error("No deployed business feed"); if(!j.businesses.every(x=>x.source_site&&x.source_key&&x.approved_overrides))throw Error("Synchronization fields missing"); if(j.businesses.some(x=>"owner_email" in x || "token_hash" in x || "contact_email" in x))throw Error("Private field exposed"); console.log(j.businesses.length + " Glenwood records returned without private fields");'
       - name: Verify public business directory is configured
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -25,6 +26,7 @@ jobs:
           if grep -q "The business directory is being prepared" /tmp/nstp.html; then echo "Production DB configuration missing"; exit 1; fi
           echo "Directory HTML returned"
       - name: Verify five public city-directory pages
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -33,6 +35,7 @@ jobs:
             curl --fail-with-body --silent --show-error --location --retry 2 --retry-delay 3 --max-time 25 "$url" -o /dev/null
           done
       - name: Verify anonymous admin and cron requests are rejected
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
