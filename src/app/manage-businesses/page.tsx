@@ -5,8 +5,10 @@ type Contact = { id: string; business_id: string; email: string; confidence: str
 type Claim = { id: string; business_id: string; email: string; status: string; created_at: string; };
 type Change = { id: string; business_id: string; status: string; submitted_by: string; payload: Record<string, string>; };
 type Outreach = { id: string; contact_id: string; status: string; delivery_status?: string; last_error?: string | null; };
-type Settings = { dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; };
-type Dataset = { businesses: Business[]; contacts: Contact[]; claims: Claim[]; changes: Change[]; outreach: Outreach[]; settings?: Settings; };
+type SiteMonth = { site: string; month: string; tracked_pageviews: number };
+type MonthlyDelivery = { id: string; month: string; status: string };
+type Settings = { dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; monthlyReportsEnabled: boolean; };
+type Dataset = { businesses: Business[]; contacts: Contact[]; claims: Claim[]; changes: Change[]; outreach: Outreach[]; siteMonthly?: SiteMonth[]; monthlyDeliveries?: MonthlyDelivery[]; settings?: Settings; };
 const empty: Dataset = { businesses: [], contacts: [], claims: [], changes: [], outreach: [] };
 export default function ManageBusinesses() {
   const [secret, setSecret] = useState("");
@@ -16,6 +18,7 @@ export default function ManageBusinesses() {
   const [notice, setNotice] = useState("");
   const [city, setCity] = useState("All");
   const [search, setSearch] = useState("");
+  const [reportMonth, setReportMonth] = useState(() => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1)).toISOString().slice(0, 7));
   async function load() {
     const response = await fetch("/api/directory/admin", { headers: { "x-nstp-admin-key": secret }, cache: "no-store" });
     const json = await response.json();
@@ -32,6 +35,21 @@ export default function ManageBusinesses() {
       setNotice(json.message || JSON.stringify(json));
       await load();
     } catch (error) { setNotice(error instanceof Error ? error.message : "Request failed"); }
+    finally { setBusy(false); }
+  }
+  async function exportReport(kind: "site" | "business") {
+    setBusy(true); setNotice("");
+    try {
+      const response = await fetch("/api/directory/admin/report?month=" + reportMonth + "&kind=" + kind,
+        { headers: { "x-nstp-admin-key": secret }, cache: "no-store" });
+      if (!response.ok) throw new Error("Unable to export data for " + reportMonth);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = "nstp-" + kind + "-reach-" + reportMonth + ".csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) { setNotice(err instanceof Error ? err.message : "Export failed"); }
     finally { setBusy(false); }
   }
   const lookup = (id: string) => data.businesses.find(b => b.id === id)?.name || "Unknown listing";
@@ -80,6 +98,7 @@ export default function ManageBusinesses() {
             ["Postal address", data.settings?.postalConfigured],
             ["Delivery webhook", data.settings?.webhookConfigured],
             ["Automated outreach", data.settings?.outreachEnabled],
+            ["Monthly owner reports", data.settings?.monthlyReportsEnabled],
           ] as [string, boolean | undefined][]).map(([label, ready]) =>
             <span key={label} className={"rounded-full px-3 py-2 " + (ready ? "bg-[#edf3e5] text-[#183527]" : "bg-[#f4ede8] text-[#805b3d]")}>
               {label}: {ready ? "Ready / enabled" : "Off / missing"}
@@ -90,6 +109,34 @@ export default function ManageBusinesses() {
         </p>
       </div>
       {notice && <p role="status" className="mb-6 rounded-lg bg-[#e7efdf] p-4 text-[#183527]">{notice}</p>}
+      <section className="mt-10 rounded-xl border border-[#e1e2d7] bg-white p-6">
+        <h2 className="font-heading text-2xl font-bold text-[#183527]">Monthly measured reach</h2>
+        <p className="mt-2 text-sm leading-6 text-[#627064]">These are first-party, deduplicated tracked pageviews and referral clicks, not guaranteed unique visitors, new customers, or sales. Older Vercel analytics cannot be backfilled into this tracker.</p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <label className="text-sm font-semibold text-[#183527]" htmlFor="month-report">Completed month</label>
+          <input id="month-report" type="month" value={reportMonth} onChange={e => setReportMonth(e.target.value)}
+            max={new Date(Date.UTC(new Date().getUTCFullYear(),new Date().getUTCMonth()-1,1)).toISOString().slice(0,7)}
+            className="rounded-md border p-2 text-sm" />
+          <button disabled={busy} onClick={() => exportReport("business")}
+            className="rounded-full border border-[#183527] px-4 py-2 text-xs font-bold text-[#183527]">Download business referrals CSV</button>
+          <button disabled={busy} onClick={() => exportReport("site")}
+            className="rounded-full border border-[#183527] px-4 py-2 text-xs font-bold text-[#183527]">Download site traffic CSV</button>
+        </div>
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {(data.siteMonthly || []).filter(m => m.month.startsWith(reportMonth)).map(m =>
+            <div key={m.site} className="rounded-lg bg-[#f4f6ef] p-4">
+              <p className="truncate text-xs text-[#6b7568]">{m.site}</p>
+              <p className="mt-2 font-heading text-2xl font-bold text-[#183527]">{m.tracked_pageviews.toLocaleString()}</p>
+              <p className="text-xs text-[#647366]">Recorded pageviews</p>
+            </div>)}
+        </div>
+        {!data.siteMonthly?.some(m=>m.month.startsWith(reportMonth)) &&
+          <p className="mt-5 text-sm text-[#697467]">No finalized tracking data for this month. Reports only begin after the tracking beacons are deployed.</p>}
+        <p className="mt-4 text-xs text-[#687466]">
+          Monthly owner reports: {(data.monthlyDeliveries || []).filter(m => m.month.startsWith(reportMonth) && m.status === "sent").length} sent ·{" "}
+          {(data.monthlyDeliveries || []).filter(m => m.month.startsWith(reportMonth) && m.status === "queued").length} queued.
+        </p>
+      </section>
       <section className="mt-10"><h2 className="font-heading text-3xl font-bold text-[#183527]">Contact research review ({candidates.length})</h2>
         <div className="mt-4 space-y-3">{candidates.slice(0, 50).map(c => <div key={c.id} className="rounded-xl border bg-white p-5">
           <p className="font-semibold">{lookup(c.business_id)} <span className="font-normal text-[#6a736b]">· {c.confidence} confidence</span></p>
