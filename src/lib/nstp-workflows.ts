@@ -1,68 +1,107 @@
-import { Business, Contact, Outreach, db, outreachHtml, researchEmails, sendMail } from "@/lib/nstp-directory";
+import { resolveMx } from "node:dns/promises";
+import { Business, Contact, Outreach, UUID, autoApprovedRoleContact, db, outreachHtml, researchEmails, rpc, sendMail, unsubscribeSignature, ORIGIN } from "@/lib/nstp-directory";
+
+async function suppressed(email: string) {
+  const rows = await db<{ email: string }[]>("nstp_suppression", "GET", { email: "eq." + email, select: "email", limit: "1" });
+  return rows.length > 0;
+}
+
+export async function suppressEmail(email: string, reason: "unsubscribe" | "complaint" | "bounce" | "manual" | "provider") {
+  await db("nstp_suppression", "POST", { on_conflict: "email" }, [{ email, reason }], "resolution=ignore-duplicates,return=minimal");
+  await db("nstp_business_contacts", "PATCH", { email: "eq." + email }, {
+    review_status: reason === "bounce" ? "bounced" : "unsubscribed", claim_eligible: false
+  });
+  const contacts = await db<Contact[]>("nstp_business_contacts", "GET", { email: "eq." + email, select: "id" });
+  for (const contact of contacts) {
+    await db("nstp_outreach", "PATCH", { contact_id: "eq." + contact.id, status: "in.(queued,failed)" },
+      { status: "cancelled", last_error: "Address suppressed: " + reason });
+  }
+}
 
 export async function researchBusiness(id: string) {
+  if (!UUID.test(id)) throw new Error("Invalid business ID");
   const rows = await db<Business[]>("nstp_businesses", "GET", { id: "eq." + id, select: "*", limit: "1" });
   const b = rows[0];
-  if (!b?.website) return { found: 0, added: 0, message: "No official website recorded." };
+  if (!b?.website || b.status !== "active") return { found: 0, added: 0, queued: 0, message: "No active listing with an official website." };
   const discovered = await researchEmails(b.website);
-  const seen = await db<Contact[]>("nstp_business_contacts", "GET", { business_id: "eq." + id, select: "email" });
-  const existing = new Set(seen.map(c => c.email));
-  const newContacts = discovered.filter(c => !existing.has(c.email));
-  if (newContacts.length) await db("nstp_business_contacts", "POST", { on_conflict: "business_id,email" },
-    newContacts.map(c => ({ ...c, business_id: id, review_status: "candidate", claim_eligible: false })), "resolution=ignore-duplicates,return=minimal");
-  await db("nstp_businesses", "PATCH", { id: "eq." + id }, { last_researched_at: new Date().toISOString() });
-  return { found: discovered.length, added: newContacts.length, message: "New addresses are awaiting review. Nothing was sent." };
-}
-export async function sendClaimInvitations(limit = 5) {
-  if (process.env.NSTP_OUTREACH_ENABLED !== "true") throw new Error("Outreach is disabled.");
-  if (!process.env.NSTP_POSTAL_ADDRESS || !process.env.NSTP_MAIL_FROM || !process.env.RESEND_API_KEY) throw new Error("Sender address and mail provider configuration are required.");
-  const since = new Date(); since.setUTCHours(0, 0, 0, 0);
-  const sent = await db<{ id: string }[]>("nstp_outreach", "GET", { status: "eq.sent", sent_at: "gte." + since.toISOString(), select: "id", limit: "15" });
-  const available = Math.min(Math.max(0, 15 - sent.length), Math.max(0, Math.min(limit, 5)));
-  if (!available) return { sent: 0, failed: 0, message: "Daily limit reached." };
-  const queued = await db<Outreach[]>("nstp_outreach", "GET", { status: "eq.queued", select: "*", order: "created_at.asc", limit: String(available) });
-  let success = 0, failed = 0;
-  for (const job of queued) {
-    const claimed = await db<Outreach[]>("nstp_outreach", "PATCH", { id: "eq." + job.id, status: "eq.queued" }, { status: "sending", attempts: job.attempts + 1 });
-    if (!claimed.length) continue;
-    try {
-      const contacts = await db<Contact[]>("nstp_business_contacts", "GET", { id: "eq." + job.contact_id, select: "*", limit: "1" });
-      const contact = contacts[0];
-      if (!contact || contact.review_status !== "approved" || !contact.claim_eligible) {
-        await db("nstp_outreach", "PATCH", { id: "eq." + job.id }, { status: "cancelled" });
-        continue;
+  const existing = await db<Contact[]>("nstp_business_contacts", "GET", { business_id: "eq." + id, select: "email" });
+  const seen = new Set(existing.map(c => c.email));
+  let added = 0, queued = 0;
+  const mxCache = new Map<string, boolean>();
+  for (const candidate of discovered) {
+    if (seen.has(candidate.email) || await suppressed(candidate.email)) continue;
+    let auto = false;
+    if (process.env.NSTP_AUTO_APPROVE_ROLE_CONTACTS !== "false" &&
+        autoApprovedRoleContact(b.website, candidate.email, candidate.confidence)) {
+      const domain = candidate.email.split("@")[1];
+      if (!mxCache.has(domain)) {
+        try { mxCache.set(domain, (await resolveMx(domain)).length > 0); }
+        catch { mxCache.set(domain, false); }
       }
-      const all = await db<Contact[]>("nstp_business_contacts", "GET", { email: "eq." + contact.email, review_status: "eq.unsubscribed", select: "id", limit: "1" });
-      if (all.length) {
-        await db("nstp_outreach", "PATCH", { id: "eq." + job.id }, { status: "cancelled" });
-        continue;
+      auto = mxCache.get(domain) === true;
+    }
+    const contacts = await db<Contact[]>("nstp_business_contacts", "POST", { on_conflict: "business_id,email" },
+      [{ ...candidate, business_id: id, review_status: auto ? "approved" : "candidate",
+        claim_eligible: auto, approved_at: auto ? new Date().toISOString() : null }],
+      "resolution=ignore-duplicates,return=representation");
+    if (contacts.length) {
+      added++;
+      if (auto) {
+        await db("nstp_outreach", "POST", { on_conflict: "contact_id,campaign" },
+          [{ contact_id: contacts[0].id, campaign: "free_claim_v1", status: "queued" }],
+          "resolution=ignore-duplicates,return=minimal");
+        queued++;
       }
-      const businesses = await db<Business[]>("nstp_businesses", "GET", { id: "eq." + contact.business_id, select: "*", limit: "1" });
-      const business = businesses[0];
-      if (!business || business.status !== "active") {
-        await db("nstp_outreach", "PATCH", { id: "eq." + job.id }, { status: "cancelled" });
-        continue;
-      }
-      // Only one invitation per address across the network for this campaign.
-      const other = await db<Contact[]>("nstp_business_contacts", "GET", { email: "eq." + contact.email, select: "id" });
-      let alreadyInvited = false;
-      for (const duplicate of other) {
-        if (duplicate.id === contact.id) continue;
-        const sentOther = await db<Outreach[]>("nstp_outreach", "GET", { contact_id: "eq." + duplicate.id, campaign: "eq.free_claim_v1", status: "eq.sent", select: "id", limit: "1" });
-        if (sentOther.length) { alreadyInvited = true; break; }
-      }
-      if (alreadyInvited) {
-        await db("nstp_outreach", "PATCH", { id: "eq." + job.id }, { status: "cancelled" });
-        continue;
-      }
-      const result = await sendMail(contact.email, "Your free listing in the " + business.city + " Arkansas guide", outreachHtml(business, contact));
-      await db("nstp_outreach", "PATCH", { id: "eq." + job.id }, { status: "sent", provider_id: result.id || null, sent_at: new Date().toISOString(), last_error: null });
-      success++;
-    } catch (err) {
-      failed++;
-      await db("nstp_outreach", "PATCH", { id: "eq." + job.id },
-        { status: "failed", last_error: err instanceof Error ? err.message.slice(0, 200) : "Unknown delivery error" });
     }
   }
-  return { sent: success, failed, message: "Sent only previously approved contacts." };
+  await db("nstp_businesses", "PATCH", { id: "eq." + id }, { last_researched_at: new Date().toISOString() });
+  return { found: discovered.length, added, queued,
+    message: "New contacts researched; eligible role-based inboxes queued, others require review. No email sent by research." };
+}
+
+export async function sendClaimInvitations(limit = 5) {
+  if (process.env.NSTP_OUTREACH_ENABLED !== "true") throw new Error("Outreach is disabled.");
+  for (const envName of ["NSTP_POSTAL_ADDRESS", "NSTP_MAIL_FROM", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET", "NSTP_TOKEN_SECRET"]) {
+    if (!process.env[envName]) throw new Error("Missing required email configuration: " + envName);
+  }
+  // This RPC owns daily limits, email/campaign uniqueness, and row-level locking.
+  // Its reservation is durable even if a provider timeout makes delivery ambiguous.
+  const reserved = await rpc<Outreach[]>("nstp_reserve_outreach", { p_limit: Math.max(0, Math.min(Number(limit) || 0, 5)) });
+  let sent = 0, failed = 0, cancelled = 0;
+  for (const job of reserved) {
+    try {
+      const contact = (await db<Contact[]>("nstp_business_contacts", "GET",
+        { id: "eq." + job.contact_id, select: "*", limit: "1" }))[0];
+      if (!contact || contact.review_status !== "approved" || !contact.claim_eligible || await suppressed(contact.email)) {
+        await db("nstp_outreach", "PATCH", { id: "eq." + job.id },
+          { status: "cancelled", last_error: "Contact no longer eligible" });
+        cancelled++; continue;
+      }
+      const business = (await db<Business[]>("nstp_businesses", "GET",
+        { id: "eq." + contact.business_id, select: "*", limit: "1" }))[0];
+      if (!business || business.status !== "active" || business.claimed_at) {
+        await db("nstp_outreach", "PATCH", { id: "eq." + job.id },
+          { status: "cancelled", last_error: "Business no longer eligible" });
+        cancelled++; continue;
+      }
+      const url = ORIGIN + "/api/directory/unsubscribe/one-click?c=" + contact.id +
+        "&s=" + encodeURIComponent(unsubscribeSignature(contact.id));
+      const result = await sendMail(contact.email,
+        "Your free listing in the " + business.city + " Arkansas guide",
+        outreachHtml(business, contact),
+        { idempotencyKey: "nstp-free-claim-" + job.id, unsubscribeUrl: url });
+      await db("nstp_outreach", "PATCH", { id: "eq." + job.id },
+        { status: "sent", delivery_status: "accepted", provider_id: result.id || null,
+          sent_at: new Date().toISOString(), last_error: null });
+      sent++;
+    } catch (error) {
+      // Never blindly retry an ambiguous provider outcome; investigate before resending.
+      failed++;
+      await db("nstp_outreach", "PATCH", { id: "eq." + job.id },
+        { status: "failed", delivery_status: "uncertain", last_error:
+          error instanceof Error ? error.message.slice(0, 200) : "Provider outcome uncertain" });
+    }
+  }
+  return { sent, failed, cancelled,
+    message: "Reserved contacts processed with network-wide deduplication. Ambiguous failures require review." };
 }
