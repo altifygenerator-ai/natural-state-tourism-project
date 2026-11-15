@@ -22,7 +22,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
         {business.address && <p className="mt-2 text-sm text-[#59645b]">{business.address}</p>}
       </div>
       <ClaimForm businessId={business.id} />
-      <p className="mt-6 text-sm text-[#6d766d]">Already verified? Use the link from your confirmation email to reopen your owner dashboard.</p>
+      <p className="mt-6 text-sm text-[#6d766d]">Already verified? Enter the same business email above to request a fresh, one-time access link whenever your owner session expires. Previously used links cannot be reused.</p>
     </div>
   </main>;
 }
