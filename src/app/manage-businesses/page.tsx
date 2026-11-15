@@ -128,7 +128,8 @@ export default function ManageBusinesses() {
           Preview branded emails
         </button>
         <button disabled={busy || !data.settings?.testRecipientConfigured || !data.settings?.senderConfigured}
-          onClick={() => action("test-mail")} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527] disabled:opacity-50">Send controlled test email</button>
+          onClick={() => action("test-mail")} title={!data.settings?.testRecipientConfigured ? "Set NSTP_TEST_EMAIL in Vercel Production, then redeploy" : !data.settings?.senderConfigured ? "Set RESEND_API_KEY in Vercel Production" : "Send a single sample only to your configured test inbox"}
+          className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527] disabled:opacity-50">Send controlled test email</button>
         <button disabled={busy || !data.settings?.outreachEnabled}
           onClick={() => action("send")} className="rounded-full bg-[#183527] px-5 py-2 text-sm font-bold text-white disabled:opacity-40">Send up to 5 approved invitations</button>
       </div>
@@ -139,6 +140,7 @@ export default function ManageBusinesses() {
             ["Research", data.settings?.researchEnabled],
             ["Auto-approve eligible role inboxes", data.settings?.roleContactAutoApprove],
             ["Mail sender", data.settings?.senderConfigured],
+            ["Controlled test inbox", data.settings?.testRecipientConfigured],
             ["Postal address", data.settings?.postalConfigured],
             ["Delivery webhook", data.settings?.webhookConfigured],
             ["Automated outreach", data.settings?.outreachEnabled],
@@ -148,6 +150,9 @@ export default function ManageBusinesses() {
               {label}: {ready ? "Ready / enabled" : "Off / missing"}
             </span>)}
         </div>
+        {!data.settings?.testRecipientConfigured && <p className="mt-3 text-sm font-medium text-[#805b3d]">
+          The test-email button needs NSTP_TEST_EMAIL set to your own inbox in the main site's Vercel Production settings. Save and redeploy, then refresh this dashboard.
+        </p>}
         <p className="mt-3 text-sm text-[#647067]">
           Email delivery is guarded by production configuration. Research does not send mail. Sending uses a daily cap and permanent network-wide deduplication.
         </p>
