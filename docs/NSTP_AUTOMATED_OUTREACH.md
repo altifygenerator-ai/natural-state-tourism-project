@@ -76,3 +76,18 @@ The business claim and updating basic information are free, regardless of advert
 ## Known limitation
 
 Some city guide pages still render older hardcoded business data. Approved central directory edits are not automatically reflected in those city pages until their data adapters are connected. City tracking measures only activity after its deployment and cannot backfill historic Vercel data.
+
+
+## Verified Natural State sending domain (2026-11-15)
+
+All business claim invitations, verification messages, owner monthly reports and public contact-form notifications use the new verified domain `naturalstatetourismproject.org`, not a Hometown Web Services address.
+
+Recommended Production sender environment value:
+`NSTP_MAIL_FROM=Natural State Tourism Project <listings@naturalstatetourismproject.org>`
+
+Optional replies (defaults to the existing public project contact mailbox):
+`NSTP_MAIL_REPLY_TO=naturalstatetourismproject@gmail.com`
+
+If `NSTP_MAIL_FROM` is absent, the application defaults to the branded listings@ identity. If it is set to a different domain, sending is rejected until fixed. Production sender verification in the Resend dashboard is still required—an application's domain check is not proof that DNS authentication has passed. Configure SPF/DKIM/DMARC and ensure the chosen sender address is authorized in Resend.
+
+The admin dashboard now includes **Preview branded emails** which renders the exact current HTML for a sample business without sending. The **Send controlled test email** action sends the same branded invitation with an explicit TEST banner only to `NSTP_TEST_EMAIL`, using a valid physical mailing address. The example claim and unsubscribe links inside that test are not functional—use separate real claim/opt-out tests for end-to-end verification. Never enable outreach based only on a rendered preview.
