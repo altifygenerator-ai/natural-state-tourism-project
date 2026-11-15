@@ -85,7 +85,7 @@ export default function ManageBusinesses() {
     {!loggedIn ? <form onSubmit={async e => { e.preventDefault(); setBusy(true); try { await load(); } catch (err) { setNotice(err instanceof Error ? err.message : "Access denied"); } finally { setBusy(false); } }}
       className="mt-10 max-w-md space-y-4 rounded-xl border bg-white p-8">
       <label className="block text-sm font-semibold">Administrator access key</label>
-      <p className="text-xs leading-5 text-[#607063]">Enter the exact value of <code>NSTP_ADMIN_KEY</code> in the main site's Vercel <strong>Production</strong> environment (24+ characters). If you just changed it, redeploy the site first.</p>
+      <p className="text-xs leading-5 text-[#607063]">Enter the exact value of <code>NSTP_ADMIN_KEY</code> in the main site&apos;s Vercel <strong>Production</strong> environment (24+ characters). If you just changed it, redeploy the site first.</p>
       <input type="password" value={secret} onChange={e => setSecret(e.target.value)} autoComplete="off" required className="w-full rounded-md border p-3" />
       <button disabled={busy} className="rounded-full bg-[#183527] px-6 py-3 font-bold text-white">Open manager</button>
       {notice && <p role="alert" className="text-sm text-red-700">{notice}</p>}
