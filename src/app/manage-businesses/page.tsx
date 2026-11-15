@@ -4,8 +4,9 @@ type Business = { id: string; name: string; city: string; category: string; webs
 type Contact = { id: string; business_id: string; email: string; confidence: string; review_status: string; source_url: string | null; };
 type Claim = { id: string; business_id: string; email: string; status: string; created_at: string; };
 type Change = { id: string; business_id: string; status: string; submitted_by: string; payload: Record<string, string>; };
-type Outreach = { id: string; contact_id: string; status: string; };
-type Dataset = { businesses: Business[]; contacts: Contact[]; claims: Claim[]; changes: Change[]; outreach: Outreach[]; };
+type Outreach = { id: string; contact_id: string; status: string; delivery_status?: string; last_error?: string | null; };
+type Settings = { dbConfigured: boolean; senderConfigured: boolean; postalConfigured: boolean; webhookConfigured: boolean; testRecipientConfigured: boolean; researchEnabled: boolean; outreachEnabled: boolean; roleContactAutoApprove: boolean; };
+type Dataset = { businesses: Business[]; contacts: Contact[]; claims: Claim[]; changes: Change[]; outreach: Outreach[]; settings?: Settings; };
 const empty: Dataset = { businesses: [], contacts: [], claims: [], changes: [], outreach: [] };
 export default function ManageBusinesses() {
   const [secret, setSecret] = useState("");
@@ -56,12 +57,37 @@ export default function ManageBusinesses() {
           ["Contacts to review", candidates.length],
           ["Pending ownership claims", pending.length],
           ["Outreach queued", queued],
+          ["Invitations accepted", data.outreach.filter(o => o.status === "sent").length],
+          ["Delivered", data.outreach.filter(o => o.delivery_status === "delivered").length],
+          ["Bounced or complained", data.outreach.filter(o => ["bounced", "complained"].includes(o.delivery_status || "")).length],
         ].map(([label, value]) => <div key={label} className="rounded-xl border bg-white p-5"><p className="text-sm text-[#617060]">{label}</p><p className="mt-2 font-heading text-4xl font-bold text-[#183527]">{value}</p></div>)}
       </div>
       <div className="my-6 flex flex-wrap gap-3">
         <button disabled={busy} onClick={() => load().catch(e => setNotice(String(e)))} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">Refresh dashboard</button>
-        <button disabled={busy} onClick={() => action("send")} className="rounded-full bg-[#183527] px-5 py-2 text-sm font-bold text-white">Send up to 5 approved invitations</button>
-        <p className="self-center text-sm text-[#59665a]">Sending is blocked unless enabled in server configuration.</p>
+        <button disabled={busy} onClick={() => action("research-batch")} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527]">Research next 5 businesses</button>
+        <button disabled={busy || !data.settings?.testRecipientConfigured || !data.settings?.senderConfigured}
+          onClick={() => action("test-mail")} className="rounded-full border border-[#183527] px-5 py-2 text-sm font-bold text-[#183527] disabled:opacity-50">Send controlled test email</button>
+        <button disabled={busy || !data.settings?.outreachEnabled}
+          onClick={() => action("send")} className="rounded-full bg-[#183527] px-5 py-2 text-sm font-bold text-white disabled:opacity-40">Send up to 5 approved invitations</button>
+      </div>
+      <div className="mb-8 rounded-xl border border-[#e1e2d7] bg-white p-5">
+        <p className="font-semibold text-[#183527]">Automation readiness</p>
+        <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold">
+          {([
+            ["Research", data.settings?.researchEnabled],
+            ["Auto-approve eligible role inboxes", data.settings?.roleContactAutoApprove],
+            ["Mail sender", data.settings?.senderConfigured],
+            ["Postal address", data.settings?.postalConfigured],
+            ["Delivery webhook", data.settings?.webhookConfigured],
+            ["Automated outreach", data.settings?.outreachEnabled],
+          ] as [string, boolean | undefined][]).map(([label, ready]) =>
+            <span key={label} className={"rounded-full px-3 py-2 " + (ready ? "bg-[#edf3e5] text-[#183527]" : "bg-[#f4ede8] text-[#805b3d]")}>
+              {label}: {ready ? "Ready / enabled" : "Off / missing"}
+            </span>)}
+        </div>
+        <p className="mt-3 text-sm text-[#647067]">
+          Email delivery is guarded by production configuration. Research does not send mail. Sending uses a daily cap and permanent network-wide deduplication.
+        </p>
       </div>
       {notice && <p role="status" className="mb-6 rounded-lg bg-[#e7efdf] p-4 text-[#183527]">{notice}</p>}
       <section className="mt-10"><h2 className="font-heading text-3xl font-bold text-[#183527]">Contact research review ({candidates.length})</h2>
@@ -70,7 +96,8 @@ export default function ManageBusinesses() {
           <p className="mt-1 break-all text-sm">{c.email}</p>
           {c.source_url && <a href={c.source_url} className="text-xs underline" target="_blank" rel="noopener noreferrer">See source</a>}
           <div className="mt-3 flex gap-3"><button disabled={busy} onClick={() => action("approve-contact", c.id)} className="rounded-full bg-[#183527] px-4 py-2 text-xs font-bold text-white">Approve & queue</button>
-          <button disabled={busy} onClick={() => action("reject-contact", c.id)} className="rounded-full border px-4 py-2 text-xs font-bold">Reject</button></div>
+          <button disabled={busy} onClick={() => action("reject-contact", c.id)} className="rounded-full border px-4 py-2 text-xs font-bold">Reject</button>
+          <button disabled={busy} onClick={() => action("suppress-contact", c.id)} className="rounded-full border border-rose-300 px-4 py-2 text-xs font-bold text-rose-800">Suppress address</button></div>
         </div>)}</div></section>
       <section className="mt-12"><h2 className="font-heading text-3xl font-bold text-[#183527]">Ownership claims ({pending.length})</h2>
         <div className="mt-4 space-y-3">{pending.map(c => <div key={c.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-white p-5">
