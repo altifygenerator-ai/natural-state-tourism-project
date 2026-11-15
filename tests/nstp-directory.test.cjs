@@ -81,3 +81,58 @@ test("business invitation uses free claim as primary action and paid offers stay
   assert.ok(!html.includes("Example & Sons <Test>"));
   delete process.env.NSTP_POSTAL_ADDRESS;
 });
+
+
+test("trusted role inboxes qualify; personal and third-party emails stay for review", () => {
+  assert.equal(directory.autoApprovedRoleContact("https://caddoriver.com", "info@caddoriver.com", "high"), true);
+  assert.equal(directory.autoApprovedRoleContact("https://caddoriver.com", "bookings@caddoriver.com", "high"), true);
+  assert.equal(directory.autoApprovedRoleContact("https://caddoriver.com", "jane@caddoriver.com", "high"), false);
+  assert.equal(directory.autoApprovedRoleContact("https://caddoriver.com", "info@gmail.com", "high"), false);
+  assert.equal(directory.autoApprovedRoleContact("https://caddoriver.com", "info@caddoriver.com", "medium"), false);
+  assert.equal(directory.autoApprovedRoleContact("http://localhost", "info@localhost", "high"), false);
+});
+
+test("outreach email adds idempotency and one-click unsubscribe", async () => {
+  const original = global.fetch;
+  const oldKey = process.env.RESEND_API_KEY;
+  const oldSender = process.env.NSTP_MAIL_FROM;
+  process.env.RESEND_API_KEY = "re_test";
+  process.env.NSTP_MAIL_FROM = "Natural State <sender@example.org>";
+  const unsubscribe = "https://www.naturalstatetourismproject.org/api/directory/unsubscribe/one-click?c=test&s=token";
+  global.fetch = async (url, options) => {
+    assert.equal(url, "https://api.resend.com/emails");
+    assert.equal(options.headers["Idempotency-Key"], "campaign-job-1");
+    const msg = JSON.parse(options.body);
+    assert.equal(msg.headers["List-Unsubscribe"], "<" + unsubscribe + ">");
+    assert.equal(msg.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
+    return { ok: true, json: async () => ({ id: "message-id" }) };
+  };
+  try {
+    const msg = await directory.sendMail("info@example.org", "Test", "<p>Test</p>",
+      { idempotencyKey: "campaign-job-1", unsubscribeUrl: unsubscribe });
+    assert.equal(msg.id, "message-id");
+  } finally {
+    global.fetch = original;
+    if (oldKey === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = oldKey;
+    if (oldSender === undefined) delete process.env.NSTP_MAIL_FROM; else process.env.NSTP_MAIL_FROM = oldSender;
+  }
+});
+
+test("reservation RPC is authenticated using the server-only Supabase key", async () => {
+  const original = global.fetch;
+  const oldUrl = process.env.NSTP_SUPABASE_URL, oldKey = process.env.NSTP_SUPABASE_SECRET_KEY;
+  process.env.NSTP_SUPABASE_URL = "https://example.supabase.co";
+  process.env.NSTP_SUPABASE_SECRET_KEY = "sb_secret_test";
+  global.fetch = async (url, options) => {
+    assert.equal(url.pathname, "/rest/v1/rpc/nstp_reserve_outreach");
+    assert.equal(options.headers.apikey, "sb_secret_test");
+    assert.equal(JSON.parse(options.body).p_limit, 5);
+    return { ok: true, json: async () => [] };
+  };
+  try { assert.deepEqual(await directory.rpc("nstp_reserve_outreach", { p_limit: 5 }), []); }
+  finally {
+    global.fetch = original;
+    if (oldUrl === undefined) delete process.env.NSTP_SUPABASE_URL; else process.env.NSTP_SUPABASE_URL = oldUrl;
+    if (oldKey === undefined) delete process.env.NSTP_SUPABASE_SECRET_KEY; else process.env.NSTP_SUPABASE_SECRET_KEY = oldKey;
+  }
+});
