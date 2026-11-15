@@ -13,7 +13,7 @@ export type Business = {
 export type Contact = { id: string; business_id: string; email: string; source_url: string | null; confidence: string; review_status: string; claim_eligible: boolean; };
 export type Claim = { id: string; business_id: string; email: string; status: string; token_hash: string | null; expires_at: string | null; created_at: string; };
 export type Change = { id: string; business_id: string; submitted_by: string; payload: Record<string, string>; status: string; submitted_at: string; };
-export type Outreach = { id: string; contact_id: string; campaign: string; status: string; attempts: number; sent_at: string | null; };
+export type Outreach = { id: string; contact_id: string; campaign: string; status: string; attempts: number; sent_at: string | null; provider_id?: string | null; delivery_status?: string; };
 export const ORIGIN = "https://www.naturalstatetourismproject.org";
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -34,6 +34,24 @@ export async function db<T>(table: string, method = "GET", params: Record<string
   if (!response.ok) throw new Error("Directory database returned " + response.status);
   const raw = await response.text();
   return (raw ? JSON.parse(raw) : null) as T;
+}
+export async function rpc<T>(name: string, body: unknown): Promise<T> {
+  if (!/^nstp_[a-z_]+$/.test(name)) throw new Error("Invalid RPC");
+  const key = required("NSTP_SUPABASE_SECRET_KEY");
+  const url = new URL(required("NSTP_SUPABASE_URL").replace(/\/$/, "") + "/rest/v1/rpc/" + name);
+  const headers: Record<string, string> = { apikey: key, "Content-Type": "application/json" };
+  if (key.startsWith("eyJ")) headers.Authorization = "Bearer " + key;
+  const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), cache: "no-store" });
+  if (!response.ok) throw new Error("Directory reservation failed: " + response.status);
+  return await response.json() as T;
+}
+export function autoApprovedRoleContact(website: string, email: string, confidence: string): boolean {
+  if (confidence !== "high" || !emailAddress(email) || !safePublicUrl(website)) return false;
+  const origin = new URL(website);
+  const websiteDomain = origin.hostname.toLowerCase().replace(/^www\./, "");
+  const [local, domain] = email.toLowerCase().split("@");
+  const businessRoles = new Set(["info","contact","hello","office","reservations","reservation","booking","bookings","sales","service","customerservice","frontdesk","reception","manager"]);
+  return domain === websiteDomain && businessRoles.has(local);
 }
 export function digest(token: string) { return createHash("sha256").update(token).digest("hex"); }
 export function token() { return randomBytes(32).toString("base64url"); }
@@ -102,12 +120,19 @@ export function safePublicUrl(value: string) {
 export function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 }
-export async function sendMail(to: string, subject: string, html: string) {
+export async function sendMail(to: string, subject: string, html: string, options: { idempotencyKey?: string; unsubscribeUrl?: string } = {}) {
   const key = required("RESEND_API_KEY");
   const from = required("NSTP_MAIL_FROM");
+  if (!emailAddress(to) || to !== emailAddress(to)) throw new Error("Invalid recipient email");
+  const headers: Record<string, string> = { Authorization: "Bearer " + key, "Content-Type": "application/json" };
+  if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
+  const emailHeaders = options.unsubscribeUrl ? {
+    "List-Unsubscribe": "<" + options.unsubscribeUrl + ">",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
+  } : undefined;
+  const body = { from, to: [to], subject, html, ...(emailHeaders ? { headers: emailHeaders } : {}) };
   const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject, html }), cache: "no-store"
+    method: "POST", headers, body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(12000)
   });
   if (!resp.ok) throw new Error("Email provider returned " + resp.status);
   return await resp.json() as { id?: string };
@@ -127,6 +152,7 @@ export function outreachHtml(business: Business, contact: Contact) {
   const city = escapeHtml(business.city);
   const body = [
     '<p>Hi there,</p>',
+    '<p>This is a business directory invitation, including information about optional paid advertising.</p>',
     '<p>We have <strong>' + name + '</strong> listed in our ' + city + ' visitor guide, part of the Natural State Tourism Project.</p>',
     '<p>We\'re building a better way for people to discover local restaurants, shops, places to stay, and services around Arkansas. Just as important, we want local business owners to be able to keep their information correct.</p>',
     '<p><strong>Claiming your basic business listing is free.</strong> You can verify ownership and submit updates to your hours, description, contact details, photos, or website for our team to review.</p>',
